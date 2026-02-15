@@ -1,6 +1,7 @@
 import Sidebar from "../components/Sidebar/Sidebar";
 import ChatWindow from "../components/Chat/ChatWindow";
 import useChats from "../hooks/useChats";
+import useHealth from "../hooks/useHealth";
 
 export default function Home() {
   const {
@@ -9,14 +10,15 @@ export default function Home() {
     activeChatId,
     setActiveChatId,
     createNewChat,
-    sendMessage
+    sendMessage,
+    loading,
   } = useChats();
 
-  return (
-    <div className="h-screen flex bg-neutral-900">
+  const health = useHealth();
 
-      {/* Sidebar */}
-      <div className="w-64 flex-shrink-0">
+  return (
+    <div className="flex h-screen">
+      <div className="w-64">
         <Sidebar
           chats={chats}
           activeChatId={activeChatId}
@@ -25,15 +27,12 @@ export default function Home() {
         />
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-h-0">
-        {activeChat && (
-          <ChatWindow
-            messages={activeChat.messages}
-            sendMessage={sendMessage}
-          />
-        )}
-      </div>
+      <ChatWindow
+        messages={activeChat?.messages || []}
+        sendMessage={sendMessage}
+        loading={loading}
+        health={health}
+      />
     </div>
   );
 }

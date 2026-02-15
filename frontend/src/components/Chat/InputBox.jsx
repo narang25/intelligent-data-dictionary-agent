@@ -10,14 +10,7 @@ export default function InputBox({ onSend }) {
   };
 
   return (
-    <div className="flex items-center gap-3 bg-neutral-800 rounded-full px-4 py-3">
-      
-      {/* Plus Button */}
-      <button className="text-neutral-400 hover:text-white transition text-xl">
-        +
-      </button>
-
-      {/* Input */}
+    <div className="flex items-center gap-2 bg-neutral-800 rounded-xl px-4 py-2">
       <input
         type="text"
         placeholder="Ask anything..."
@@ -26,13 +19,11 @@ export default function InputBox({ onSend }) {
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSend()}
       />
-
-      {/* Circular Send Button */}
       <button
         onClick={handleSend}
-        className="w-9 h-9 flex items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 transition"
+        className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-blue-700 transition"
       >
-        <span className="text-white text-lg leading-none">↑</span>
+        Send
       </button>
     </div>
   );
