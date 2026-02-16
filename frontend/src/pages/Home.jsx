@@ -1,6 +1,6 @@
 import Sidebar from "../components/Sidebar/Sidebar";
 import ChatWindow from "../components/Chat/ChatWindow";
-import useChats from "../hooks/useChats";
+import { useChat } from "../context/ChatContext"; // ✅ changed
 import useHealth from "../hooks/useHealth";
 
 export default function Home() {
@@ -12,7 +12,7 @@ export default function Home() {
     createNewChat,
     sendMessage,
     loading,
-  } = useChats();
+  } = useChat(); // ✅ changed
 
   const health = useHealth();
 

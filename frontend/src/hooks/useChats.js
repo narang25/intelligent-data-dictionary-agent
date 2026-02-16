@@ -2,26 +2,43 @@ import { useState, useEffect } from "react";
 import { sendMessageToAPI } from "../services/api";
 
 const STORAGE_KEY = "jarvis_chats";
+const ACTIVE_CHAT_KEY = "jarvis_active_chat";
 
 export default function useChats() {
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // ✅ Load from storage
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
+    const storedChats = localStorage.getItem(STORAGE_KEY);
+    const storedActive = localStorage.getItem(ACTIVE_CHAT_KEY);
+
+    if (storedChats) {
+      const parsed = JSON.parse(storedChats);
       setChats(parsed);
-      setActiveChatId(parsed[0]?.id || null);
+
+      if (storedActive) {
+        setActiveChatId(Number(storedActive));
+      } else {
+        setActiveChatId(parsed[0]?.id || null);
+      }
     } else {
       createNewChat();
     }
   }, []);
 
+  // ✅ Persist chats
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
   }, [chats]);
+
+  // ✅ Persist active chat
+  useEffect(() => {
+    if (activeChatId) {
+      localStorage.setItem(ACTIVE_CHAT_KEY, activeChatId);
+    }
+  }, [activeChatId]);
 
   const activeChat = chats.find((c) => c.id === activeChatId);
 
@@ -46,15 +63,7 @@ export default function useChats() {
       text,
     };
 
-    // ✅ Functional update (prevents stale state)
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === activeChatId
-          ? { ...chat, messages: [...chat.messages, userMessage] }
-          : chat
-      )
-    );
-
+    updateMessages([...activeChat.messages, userMessage]);
     setLoading(true);
 
     try {
@@ -68,23 +77,18 @@ export default function useChats() {
         sender: "assistant",
         text: response.answer,
         mode: response.mode,
-        sql: response.sql,
-        explanation: response.explanation,
-        result: response.result,
+        sql: response.sql || null,
+        explanation: response.explanation || null,
+        result: response.result || null,
       };
 
-      // ✅ Correct state update
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.id === activeChatId
-            ? {
-                ...chat,
-                sessionId: response.session_id,
-                messages: [...chat.messages, assistantMessage],
-              }
-            : chat
-        )
-      );
+      updateMessages([
+        ...activeChat.messages,
+        userMessage,
+        assistantMessage,
+      ]);
+
+      updateSessionId(response.session_id);
 
     } catch (error) {
       const errorMessage = {
@@ -93,16 +97,34 @@ export default function useChats() {
         text: error.message,
       };
 
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.id === activeChatId
-            ? { ...chat, messages: [...chat.messages, errorMessage] }
-            : chat
-        )
-      );
+      updateMessages([
+        ...activeChat.messages,
+        userMessage,
+        errorMessage,
+      ]);
     }
 
     setLoading(false);
+  };
+
+  const updateMessages = (messages) => {
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.id === activeChatId ? { ...chat, messages } : chat
+      )
+    );
+  };
+
+  const updateSessionId = (sessionId) => {
+    if (!sessionId) return;
+
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.id === activeChatId
+          ? { ...chat, sessionId }
+          : chat
+      )
+    );
   };
 
   return {
