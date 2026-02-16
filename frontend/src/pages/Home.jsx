@@ -11,6 +11,7 @@ export default function Home() {
     setActiveChatId,
     createNewChat,
     sendMessage,
+    renameChat,
     loading,
   } = useChat(); // ✅ changed
 
@@ -19,12 +20,14 @@ export default function Home() {
   return (
     <div className="flex h-screen">
       <div className="w-64">
-        <Sidebar
-          chats={chats}
-          activeChatId={activeChatId}
-          setActiveChatId={setActiveChatId}
-          createNewChat={createNewChat}
-        />
+       <Sidebar
+  chats={chats}
+  activeChatId={activeChatId}
+  setActiveChatId={setActiveChatId}
+  createNewChat={createNewChat}
+  renameChat={renameChat}
+/>
+
       </div>
 
       <ChatWindow

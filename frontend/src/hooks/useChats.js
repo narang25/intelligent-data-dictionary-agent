@@ -126,6 +126,16 @@ export default function useChats() {
       )
     );
   };
+  const renameChat = (chatId, newTitle) => {
+  setChats((prev) =>
+    prev.map((chat) =>
+      chat.id === chatId
+        ? { ...chat, title: newTitle }
+        : chat
+    )
+  );
+};
+
 
   return {
     chats,
@@ -134,6 +144,7 @@ export default function useChats() {
     setActiveChatId,
     createNewChat,
     sendMessage,
+    renameChat,
     loading,
   };
 }
