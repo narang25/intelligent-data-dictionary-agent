@@ -46,7 +46,15 @@ export default function useChats() {
       text,
     };
 
-    updateMessages([...activeChat.messages, userMessage]);
+    // ✅ Functional update (prevents stale state)
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.id === activeChatId
+          ? { ...chat, messages: [...chat.messages, userMessage] }
+          : chat
+      )
+    );
+
     setLoading(true);
 
     try {
@@ -59,51 +67,42 @@ export default function useChats() {
         id: Date.now() + 1,
         sender: "assistant",
         text: response.answer,
+        mode: response.mode,
+        sql: response.sql,
+        explanation: response.explanation,
+        result: response.result,
       };
 
-      updateMessages([
-        ...activeChat.messages,
-        userMessage,
-        assistantMessage,
-      ]);
-
-      updateSessionId(response.session_id);
+      // ✅ Correct state update
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChatId
+            ? {
+                ...chat,
+                sessionId: response.session_id,
+                messages: [...chat.messages, assistantMessage],
+              }
+            : chat
+        )
+      );
 
     } catch (error) {
       const errorMessage = {
         id: Date.now() + 2,
         sender: "assistant",
-        text: "Error: Failed to fetch response from server.",
+        text: error.message,
       };
 
-      updateMessages([
-        ...activeChat.messages,
-        userMessage,
-        errorMessage,
-      ]);
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChatId
+            ? { ...chat, messages: [...chat.messages, errorMessage] }
+            : chat
+        )
+      );
     }
 
     setLoading(false);
-  };
-
-  const updateMessages = (messages) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === activeChatId ? { ...chat, messages } : chat
-      )
-    );
-  };
-
-  const updateSessionId = (sessionId) => {
-    if (!sessionId) return;
-
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === activeChatId
-          ? { ...chat, sessionId }
-          : chat
-      )
-    );
   };
 
   return {

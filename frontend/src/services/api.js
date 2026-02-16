@@ -13,9 +13,8 @@ export async function sendMessageToAPI(question, sessionId = null) {
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    console.error("API Error:", text);
-    throw new Error("Failed to fetch response from server");
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to fetch response");
   }
 
   return await response.json();

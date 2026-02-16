@@ -1,6 +1,13 @@
 from sqlalchemy import (
-    Column, Integer, String, Text, ForeignKey,
-    Boolean, Float, DateTime, UniqueConstraint
+    Column,
+    Integer,
+    String,
+    Text,
+    ForeignKey,
+    Boolean,
+    Float,
+    DateTime,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship, declarative_base
 from pgvector.sqlalchemy import Vector
@@ -9,9 +16,9 @@ from datetime import datetime
 Base = declarative_base()
 
 
-# ------------------------
+# =========================
 # Schema Model
-# ------------------------
+# =========================
 class Schema(Base):
     __tablename__ = "schemas"
 
@@ -21,9 +28,9 @@ class Schema(Base):
     tables = relationship("Table", back_populates="schema")
 
 
-# ------------------------
+# =========================
 # Table Model
-# ------------------------
+# =========================
 class Table(Base):
     __tablename__ = "tables"
 
@@ -36,9 +43,9 @@ class Table(Base):
     relationships = relationship("Relationship", back_populates="table")
 
 
-# ------------------------
+# =========================
 # Column Model
-# ------------------------
+# =========================
 class ColumnModel(Base):
     __tablename__ = "columns"
 
@@ -50,12 +57,16 @@ class ColumnModel(Base):
     table_id = Column(Integer, ForeignKey("tables.id"))
     table = relationship("Table", back_populates="columns")
 
-    profile = relationship("ColumnProfile", uselist=False, back_populates="column")
+    profile = relationship(
+        "ColumnProfile",
+        uselist=False,
+        back_populates="column"
+    )
 
 
-# ------------------------
+# =========================
 # Relationship Model
-# ------------------------
+# =========================
 class Relationship(Base):
     __tablename__ = "relationships"
 
@@ -69,9 +80,9 @@ class Relationship(Base):
     table = relationship("Table", back_populates="relationships")
 
 
-# ------------------------
+# =========================
 # Column Profiling Model
-# ------------------------
+# =========================
 class ColumnProfile(Base):
     __tablename__ = "column_profiles"
 
@@ -86,47 +97,66 @@ class ColumnProfile(Base):
     column = relationship("ColumnModel", back_populates="profile")
 
 
-# ------------------------
+# =========================
 # Documentation Model
-# ------------------------
+# =========================
 class Documentation(Base):
     __tablename__ = "documentation"
 
+    __table_args__ = (
+        UniqueConstraint(
+            "entity_type",
+            "entity_id",
+            name="unique_documentation_entity",
+        ),
+    )
 
-    __table_args__ = (UniqueConstraint('entity_type', 'entity_id', name='unique_entity_doc'),)  # Ensure one doc per entity
     id = Column(Integer, primary_key=True)
-    entity_type = Column(String)  # table or column
+    entity_type = Column(String)  # table / column
     entity_id = Column(Integer)
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-# ------------------------
+# =========================
 # Embedding Model
-# ------------------------
+# =========================
 class Embedding(Base):
     __tablename__ = "embeddings"
-    
-    __table_args__ = (UniqueConstraint('entity_type', 'entity_id', name='unique_entity_doc'),) 
+
+    __table_args__ = (
+        UniqueConstraint(
+            "entity_type",
+            "entity_id",
+            name="unique_embedding_entity",
+        ),
+    )
+
     id = Column(Integer, primary_key=True)
     entity_type = Column(String)
     entity_id = Column(Integer)
-    vector = Column(Vector(384))  # Adjust dimension later
-
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
-from sqlalchemy.orm import relationship
-from datetime import datetime
+    vector = Column(Vector(384))
 
 
+# =========================
+# Chat Session Model
+# =========================
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
     id = Column(Integer, primary_key=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    messages = relationship("ChatMessage", back_populates="session")
+    messages = relationship(
+        "ChatMessage",
+        back_populates="session",
+        cascade="all, delete-orphan"
+    )
 
 
+# =========================
+# Chat Message Model
+# =========================
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 

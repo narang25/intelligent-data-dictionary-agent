@@ -1,9 +1,6 @@
 from app.services.embedding_service import EmbeddingService
 from app.services.vector_search_service import VectorSearchService
-from app.domain.models import Documentation, ChatSession, ChatMessage
-
-
-import json
+from app.domain.models import Documentation, ChatSession, ChatMessage, ColumnModel
 
 
 class ChatService:
@@ -59,7 +56,6 @@ class ChatService:
         messages = list(reversed(messages))
 
         history_text = ""
-
         for msg in messages:
             history_text += f"{msg.role.upper()}: {msg.content}\n"
 
@@ -76,21 +72,28 @@ class ChatService:
         )
 
         sql_service = SQLGenerationService(self.ai_service)
-
         schema_context = build_schema_context(self.session)
 
         sql_response = sql_service.generate_sql(schema_context, question)
 
         if "error" in sql_response:
-            return sql_response
+            return {
+                "session_id": session_id,
+                "mode": "sql",
+                "answer": sql_response["error"]
+            }
 
-        sql_query = sql_response["sql"]
-        explanation = sql_response["explanation"]
+        sql_query = sql_response.get("sql")
+        explanation = sql_response.get("explanation")
 
         execution = sql_service.execute_safe_query(self.engine, sql_query)
 
         if "error" in execution:
-            return execution
+            return {
+                "session_id": session_id,
+                "mode": "sql",
+                "answer": execution["error"]
+            }
 
         history = self._get_recent_history(session_id)
 
@@ -118,7 +121,6 @@ Rows: {execution['rows']}
 
         summary = self.ai_service.generate(system_prompt, user_prompt)
 
-        # Store assistant response
         assistant_message = ChatMessage(
             session_id=session_id,
             role="assistant",
@@ -127,13 +129,14 @@ Rows: {execution['rows']}
         self.session.add(assistant_message)
         self.session.commit()
 
+        # ✅ FULL SQL RESPONSE
         return {
             "session_id": session_id,
             "mode": "sql",
+            "answer": summary,
             "sql": sql_query,
             "explanation": explanation,
-            "result": execution,
-            "summary": summary
+            "result": execution
         }
 
     # ==================================================
@@ -147,11 +150,8 @@ Rows: {execution['rows']}
         context_text = ""
         seen = set()
 
-        from app.domain.models import ColumnModel
-
         for entity_type, entity_id, distance in results:
 
-            # Optional relaxed threshold
             if distance > 1.2:
                 continue
 
@@ -234,7 +234,6 @@ Question:
 
         response = self.ai_service.generate(system_prompt, user_prompt)
 
-        # Store assistant message
         assistant_message = ChatMessage(
             session_id=session_id,
             role="assistant",
