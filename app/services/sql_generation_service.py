@@ -1,5 +1,5 @@
-import re
 import json
+import re
 from sqlalchemy import text
 
 
@@ -19,6 +19,8 @@ You are a senior PostgreSQL database architect.
 Generate ONLY a valid SELECT SQL query.
 Do NOT generate INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE.
 
+Always include a LIMIT clause unless explicitly counting.
+
 Return response in this strict JSON format:
 
 {
@@ -37,18 +39,29 @@ User Question:
 
         response = self.ai_service.generate(system_prompt, user_prompt)
 
+        if not response:
+            return {
+                "error": "Empty response from LLM"
+            }
+
         clean_response = response.strip()
 
-        # Remove markdown fences
+        # Remove markdown code fences if present
         if clean_response.startswith("```"):
-            clean_response = clean_response.split("```")[1]
-            clean_response = clean_response.replace("json", "").strip()
+            clean_response = re.sub(r"```.*?\n", "", clean_response)
+            clean_response = clean_response.replace("```", "").strip()
 
         try:
             parsed = json.loads(clean_response)
         except Exception:
             return {
                 "error": "Failed to parse SQL response",
+                "raw_response": response
+            }
+
+        if "sql" not in parsed or "explanation" not in parsed:
+            return {
+                "error": "Invalid SQL response structure",
                 "raw_response": response
             }
 
@@ -59,18 +72,38 @@ User Question:
     # ----------------------------
     def validate_sql(self, sql: str):
 
-        sql = sql.strip().lower()
+        if not sql:
+            return False
+
+        sql_clean = sql.strip().lower()
 
         forbidden = ["insert", "update", "delete", "drop", "alter", "truncate"]
 
         for word in forbidden:
-            if word in sql:
+            if word in sql_clean:
                 return False
 
-        if not sql.startswith("select"):
+        if not sql_clean.startswith("select"):
             return False
 
         return True
+
+    # ----------------------------
+    # Auto Add LIMIT Protection
+    # ----------------------------
+    def enforce_limit(self, sql: str, default_limit: int = 50):
+
+        sql_lower = sql.lower()
+
+        # Do not enforce limit for COUNT queries
+        if "count(" in sql_lower:
+            return sql
+
+        if "limit" not in sql_lower:
+            sql = sql.rstrip(";")
+            sql += f" LIMIT {default_limit};"
+
+        return sql
 
     # ----------------------------
     # Safe Execution
@@ -81,6 +114,9 @@ User Question:
             return {
                 "error": "Unsafe or invalid SQL detected."
             }
+
+        # 🔐 Enforce LIMIT automatically
+        sql = self.enforce_limit(sql)
 
         try:
             with engine.connect() as conn:

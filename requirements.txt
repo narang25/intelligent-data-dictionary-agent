@@ -68,7 +68,17 @@ wcwidth==0.6.0
 xxhash==3.6.0
 zstandard==0.25.0
 
+# =========================
+# AI / ML
+# =========================
 sentence-transformers
 torch
 transformers
 
+# =========================
+# AUTHENTICATION (FIXED)
+# =========================
+passlib[bcrypt]
+bcrypt==3.2.2
+python-jose[cryptography]
+email-validator
