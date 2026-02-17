@@ -15,6 +15,19 @@ from datetime import datetime
 
 Base = declarative_base()
 
+# =========================
+# User Model
+# =========================
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    sessions = relationship("ChatSession", back_populates="user")
+
 
 # =========================
 # Schema Model
@@ -57,11 +70,7 @@ class ColumnModel(Base):
     table_id = Column(Integer, ForeignKey("tables.id"))
     table = relationship("Table", back_populates="columns")
 
-    profile = relationship(
-        "ColumnProfile",
-        uselist=False,
-        back_populates="column"
-    )
+    profile = relationship("ColumnProfile", uselist=False, back_populates="column")
 
 
 # =========================
@@ -104,15 +113,11 @@ class Documentation(Base):
     __tablename__ = "documentation"
 
     __table_args__ = (
-        UniqueConstraint(
-            "entity_type",
-            "entity_id",
-            name="unique_documentation_entity",
-        ),
+        UniqueConstraint("entity_type", "entity_id", name="unique_documentation_entity"),
     )
 
     id = Column(Integer, primary_key=True)
-    entity_type = Column(String)  # table / column
+    entity_type = Column(String)
     entity_id = Column(Integer)
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -125,11 +130,7 @@ class Embedding(Base):
     __tablename__ = "embeddings"
 
     __table_args__ = (
-        UniqueConstraint(
-            "entity_type",
-            "entity_id",
-            name="unique_embedding_entity",
-        ),
+        UniqueConstraint("entity_type", "entity_id", name="unique_embedding_entity"),
     )
 
     id = Column(Integer, primary_key=True)
@@ -145,7 +146,10 @@ class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
     id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="sessions")
 
     messages = relationship(
         "ChatMessage",
@@ -162,7 +166,7 @@ class ChatMessage(Base):
 
     id = Column(Integer, primary_key=True)
     session_id = Column(Integer, ForeignKey("chat_sessions.id"))
-    role = Column(String)  # user / assistant
+    role = Column(String)
     content = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
