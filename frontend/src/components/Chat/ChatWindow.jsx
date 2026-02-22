@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import MessageBubble from "./MessageBubble";
 import InputBox from "./InputBox";
 import Loader from "../UI/Loader";
@@ -8,6 +9,13 @@ export default function ChatWindow({
   loading,
   health,
 }) {
+  const messagesEndRef = useRef(null);
+
+  // Auto-scroll to bottom when messages change or loading state changes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
   const getHealthColor = () => {
     if (!health) return "bg-yellow-500";
     if (health.status === "ok") return "bg-green-500";
@@ -16,10 +24,10 @@ export default function ChatWindow({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-neutral-900 text-neutral-200 min-h-0">
+    <div className="flex-1 flex flex-col bg-neutral-900 text-neutral-200 min-h-0 min-w-0 overflow-hidden">
 
       {/* Header */}
-      <div className="p-4 border-b border-neutral-800 flex justify-between items-center text-sm">
+      <div className="p-4 border-b border-neutral-800 flex justify-between items-center text-sm flex-shrink-0">
         <div className="font-medium">
           Intelligent Data Dictionary
         </div>
@@ -35,16 +43,19 @@ export default function ChatWindow({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 space-y-4 min-h-0">
         {messages.map((msg) => (
           <MessageBubble key={msg.id} message={msg} />
         ))}
 
         {loading && <Loader />}
+        
+        {/* Invisible element to scroll to */}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
-      <div className="border-t border-neutral-800 bg-neutral-900 py-4">
+      <div className="border-t border-neutral-800 bg-neutral-900 py-4 flex-shrink-0">
         <div className="max-w-3xl mx-auto px-4">
           <InputBox onSend={sendMessage} />
         </div>

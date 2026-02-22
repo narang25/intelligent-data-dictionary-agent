@@ -18,8 +18,8 @@ export default function Home() {
   const health = useHealth();
 
   return (
-    <div className="flex h-screen">
-      <div className="w-64">
+    <div className="flex h-screen w-full">
+      <div className="w-[200px] min-w-[200px] max-w-[200px] flex-shrink-0">
        <Sidebar
   chats={chats}
   activeChatId={activeChatId}

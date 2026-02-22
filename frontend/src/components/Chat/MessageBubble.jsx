@@ -52,9 +52,9 @@ export default function MessageBubble({ message }) {
   };
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
       <div
-        className={`px-4 py-3 rounded-xl max-w-[90%] text-sm whitespace-pre-wrap ${
+        className={`px-4 py-3 rounded-xl max-w-[80%] text-sm whitespace-pre-wrap break-words overflow-hidden ${
           isUser
             ? "bg-blue-600 text-white"
             : "bg-neutral-800 text-neutral-200"
@@ -66,7 +66,7 @@ export default function MessageBubble({ message }) {
           </div>
         )}
 
-        <div>{message.text}</div>
+        <div className="break-words overflow-wrap-anywhere">{message.text}</div>
 
         {!isUser && message.mode === "sql" && message.sql && (
           <div className="mt-4 space-y-4">

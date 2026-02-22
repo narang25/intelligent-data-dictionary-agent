@@ -32,7 +32,7 @@ export default function VisualizationPage() {
       <div className="p-10 text-white bg-neutral-900 min-h-screen">
         No data available.
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/chat")}
           className="ml-4 bg-blue-600 px-3 py-1 rounded"
         >
           Go Back
@@ -82,7 +82,7 @@ export default function VisualizationPage() {
       <div className="p-10 text-white bg-neutral-900 min-h-screen">
         No numeric column found.
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/chat")}
           className="ml-4 bg-blue-600 px-3 py-1 rounded"
         >
           Go Back
@@ -254,7 +254,7 @@ export default function VisualizationPage() {
       </div>
 
       <button
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/chat")}
         className="mt-6 bg-blue-600 px-4 py-2 rounded"
       >
         Back to Chat

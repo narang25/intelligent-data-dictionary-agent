@@ -4,34 +4,115 @@ import { sendMessageToAPI } from "../services/api";
 const STORAGE_KEY = "jarvis_chats";
 const ACTIVE_CHAT_KEY = "jarvis_active_chat";
 
+// Generate a short title from the first message
+const generateTitle = (text) => {
+  if (!text) return "New Chat";
+  
+  // Clean and truncate the text
+  const cleaned = text.trim().replace(/\s+/g, ' ');
+  
+  // Take first 30 characters, try to break at word boundary
+  if (cleaned.length <= 30) return cleaned;
+  
+  const truncated = cleaned.substring(0, 30);
+  const lastSpace = truncated.lastIndexOf(' ');
+  
+  if (lastSpace > 15) {
+    return truncated.substring(0, lastSpace) + '...';
+  }
+  
+  return truncated + '...';
+};
+
 export default function useChats() {
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // ✅ Load from storage
+  // ✅ Load from storage and ensure a chat exists
   useEffect(() => {
     const storedChats = localStorage.getItem(STORAGE_KEY);
     const storedActive = localStorage.getItem(ACTIVE_CHAT_KEY);
 
     if (storedChats) {
-      const parsed = JSON.parse(storedChats);
-      setChats(parsed);
-
-      if (storedActive) {
-        setActiveChatId(Number(storedActive));
-      } else {
-        setActiveChatId(parsed[0]?.id || null);
+      try {
+        const parsed = JSON.parse(storedChats);
+      
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          // No chats exist, create a new one
+          const newChat = {
+            id: Date.now(),
+            title: "New Chat",
+            sessionId: null,
+            messages: [],
+            isRenamed: false,
+          };
+          setChats([newChat]);
+          setActiveChatId(newChat.id);
+        } else {
+          setChats(parsed);
+          
+          // Check if there's an empty "New Chat" we can reuse
+          const emptyChat = parsed.find(
+            (c) => c.messages.length === 0 && c.title === "New Chat"
+          );
+          
+          if (emptyChat) {
+            // Reuse existing empty chat
+            setActiveChatId(emptyChat.id);
+          } else if (storedActive && parsed.find(c => c.id === Number(storedActive))) {
+            // Use stored active chat if it still exists
+            setActiveChatId(Number(storedActive));
+          } else {
+            // Create a new chat for fresh start
+            const newChat = {
+              id: Date.now(),
+              title: "New Chat",
+              sessionId: null,
+              messages: [],
+              isRenamed: false,
+            };
+            setChats([newChat, ...parsed]);
+            setActiveChatId(newChat.id);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse stored chats:", e);
+        // Create fresh chat on parse error
+        const newChat = {
+          id: Date.now(),
+          title: "New Chat",
+          sessionId: null,
+          messages: [],
+          isRenamed: false,
+        };
+        setChats([newChat]);
+        setActiveChatId(newChat.id);
       }
     } else {
-      createNewChat();
+      // No stored chats, create first chat
+      const newChat = {
+        id: Date.now(),
+        title: "New Chat",
+        sessionId: null,
+        messages: [],
+        isRenamed: false,
+      };
+      setChats([newChat]);
+      setActiveChatId(newChat.id);
     }
+    
+    // Mark as initialized after loading
+    setIsInitialized(true);
   }, []);
 
-  // ✅ Persist chats
+  // ✅ Persist chats (only after initialization)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
-  }, [chats]);
+    if (isInitialized && chats.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
+    }
+  }, [chats, isInitialized]);
 
   // ✅ Persist active chat
   useEffect(() => {
@@ -48,6 +129,7 @@ export default function useChats() {
       title: "New Chat",
       sessionId: null,
       messages: [],
+      isRenamed: false,  // Track if user manually renamed
     };
 
     setChats((prev) => [newChat, ...prev]);
@@ -62,6 +144,19 @@ export default function useChats() {
       sender: "user",
       text,
     };
+
+    // Auto-generate title from first message if not manually renamed
+    const isFirstMessage = activeChat.messages.length === 0;
+    if (isFirstMessage && !activeChat.isRenamed) {
+      const autoTitle = generateTitle(text);
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChatId
+            ? { ...chat, title: autoTitle }
+            : chat
+        )
+      );
+    }
 
     updateMessages([...activeChat.messages, userMessage]);
     setLoading(true);
@@ -127,14 +222,14 @@ export default function useChats() {
     );
   };
   const renameChat = (chatId, newTitle) => {
-  setChats((prev) =>
-    prev.map((chat) =>
-      chat.id === chatId
-        ? { ...chat, title: newTitle }
-        : chat
-    )
-  );
-};
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.id === chatId
+          ? { ...chat, title: newTitle, isRenamed: true }
+          : chat
+      )
+    );
+  };
 
 
   return {
