@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
+from typing import Any
 
 
 # =========================
@@ -11,7 +12,7 @@ class ChatRequest(BaseModel):
 
 class SQLResult(BaseModel):
     columns: List[str]
-    rows: List[List[str]]
+    rows: List[List[Any]]
 
 
 class ChatResponse(BaseModel):

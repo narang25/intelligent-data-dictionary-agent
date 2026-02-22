@@ -8,6 +8,7 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     volumes:
       - .:/app
+      - /Users/nikhi/Downloads/olist:/app/datasets/olist
     ports:
       - "8000:8000"
     environment:

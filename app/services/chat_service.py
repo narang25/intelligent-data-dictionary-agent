@@ -13,6 +13,57 @@ class ChatService:
         self.ai_service = ai_service
 
     # ==================================================
+    # INTENT DETECTION
+    # ==================================================
+    def _detect_intent(self, question: str) -> str:
+        """
+        Detect whether the question should be handled by SQL or RAG mode.
+        Returns: 'sql' or 'rag'
+        """
+        q_lower = question.lower()
+
+        # RAG keywords - documentation, explanation, description questions
+        rag_keywords = [
+            "documentation", "document", "describe", "description", "explain",
+            "what is", "what are", "tell me about", "meaning of", "purpose of",
+            "why", "how does", "understand", "definition", "overview",
+            "summary", "business", "data quality", "usage", "recommended",
+            "help me understand", "can you explain", "what does"
+        ]
+
+        # Check for RAG intent first (documentation/explanation requests)
+        for keyword in rag_keywords:
+            if keyword in q_lower:
+                # But if they also ask for specific data, use SQL
+                sql_action_words = ["calculate", "compute", "sum", "count", "average", 
+                                   "how many", "how much", "total", "revenue"]
+                if any(action in q_lower for action in sql_action_words):
+                    return "sql"
+                return "rag"
+
+        # SQL keywords - data retrieval, calculations, aggregations
+        sql_keywords = [
+            "generate sql", "write sql", "run query", "execute",
+            "show me", "list all", "find all", "get all",
+            "count", "average", "avg", "sum", "total", 
+            "how many", "how much", "calculate", "compute",
+            "revenue", "sales", "trend", "monthly", "yearly", "daily",
+            "top", "bottom", "highest", "lowest", "maximum", "minimum",
+            "group by", "per", "by state", "by category", "by month", "by year",
+            "between", "greater than", "less than", "more than",
+            "delivery time", "payment value", "order status",
+            "select", "from olist", "query"
+        ]
+
+        # Check for SQL intent
+        for keyword in sql_keywords:
+            if keyword in q_lower:
+                return "sql"
+
+        # Default to RAG for general questions
+        return "rag"
+
+    # ==================================================
     # MAIN ENTRY
     # ==================================================
     def ask(self, question: str, session_id: int = None):
@@ -33,9 +84,10 @@ class ChatService:
         self.session.add(user_message)
         self.session.commit()
 
-        sql_keywords = ["generate sql", "write sql", "show", "list", "find", "count"]
+        # Detect intent
+        intent = self._detect_intent(question)
 
-        if any(keyword in question.lower() for keyword in sql_keywords):
+        if intent == "sql":
             return self._handle_sql_mode(question, session_id)
 
         return self._rag_reasoning(question, session_id)

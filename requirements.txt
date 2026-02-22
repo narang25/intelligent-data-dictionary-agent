@@ -67,6 +67,7 @@ vine==5.1.0
 wcwidth==0.6.0
 xxhash==3.6.0
 zstandard==0.25.0
+pandas
 
 # =========================
 # AI / ML
