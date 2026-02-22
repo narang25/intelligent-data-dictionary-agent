@@ -1,0 +1,92 @@
+# ================================
+# Production Docker Compose
+# ================================
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+
+  # ================================
+  # Backend API
+  # ================================
+  api:
+    build: .
+    container_name: jarvis_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/intelligent_dictionary
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      GROQ_API_KEY: ${GROQ_API_KEY}
+    depends_on:
+      - db
+      - redis
+    restart: always
+    networks:
+      - app-network
+
+  # ================================
+  # Celery Worker
+  # ================================
+  worker:
+    build: .
+    container_name: jarvis_worker
+    command: celery -A app.core.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/intelligent_dictionary
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      GROQ_API_KEY: ${GROQ_API_KEY}
+    depends_on:
+      - db
+      - redis
+    restart: always
+    networks:
+      - app-network
+
+  # ================================
+  # PostgreSQL with pgvector
+  # ================================
+  db:
+    image: ankane/pgvector
+    container_name: jarvis_db
+    environment:
+      POSTGRES_DB: intelligent_dictionary
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - app-network
+
+  # ================================
+  # Redis
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: jarvis_redis
+    restart: always
+    networks:
+      - app-network
+
+  # ================================
+  # Frontend (Nginx)
+  # ================================
+  frontend:
+    build: ./frontend
+    container_name: jarvis_frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+    restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

@@ -60,6 +60,18 @@ services:
     ports:
       - "6379:6379"
     restart: always
+
+  # ================================
+  # Frontend Service
+  # ================================
+  frontend:
+    build: ./frontend
+    container_name: jarvis_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: always
   
 volumes:
   postgres_data:
