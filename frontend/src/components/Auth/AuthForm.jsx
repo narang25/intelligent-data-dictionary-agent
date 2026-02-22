@@ -18,10 +18,10 @@ export default function AuthForm({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-white">
+    <div className="min-h-screen flex items-center justify-center bg-primary text-primary">
       <form
         onSubmit={handleSubmit}
-        className="bg-neutral-800 p-8 rounded-2xl w-[380px] h-[520px] flex flex-col justify-between shadow-xl"
+        className="bg-surface p-8 rounded-2xl w-[380px] h-[520px] flex flex-col justify-between shadow-xl border border-primary"
       >
         {/* Top Section */}
         <div>
@@ -35,7 +35,7 @@ export default function AuthForm({
             <input
               type="email"
               placeholder="Email"
-              className="w-full p-3 bg-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 bg-gray-100 dark:bg-neutral-700 text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -45,7 +45,7 @@ export default function AuthForm({
               <input
                 type={showPassword ? "text" : "password"}
                 placeholder="Password"
-                className="w-full p-3 pr-12 bg-neutral-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 pr-12 bg-gray-100 dark:bg-neutral-700 text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -53,7 +53,7 @@ export default function AuthForm({
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary hover:text-primary transition"
               >
                 {showPassword ? (
                   /* Eye Off */
@@ -92,17 +92,17 @@ export default function AuthForm({
         <div className="space-y-5">
           <button
             type="submit"
-            className="w-full bg-blue-600 p-3 rounded-lg hover:bg-blue-500 transition font-medium"
+            className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-500 transition font-medium"
           >
             {buttonText}
           </button>
 
           {linkText && (
-            <p className="text-center text-sm text-gray-400">
+            <p className="text-center text-sm text-secondary">
               {linkText}{" "}
               <Link
                 to={linkTo}
-                className="text-blue-400 hover:underline"
+                className="text-accent hover:underline"
               >
                 Click here
               </Link>

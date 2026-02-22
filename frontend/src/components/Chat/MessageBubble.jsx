@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useVisualization } from "../../context/VisualizationContext";
 import { useNavigate } from "react-router-dom";
 
-export default function MessageBubble({ message }) {
+export default function MessageBubble({ message, isDark = true }) {
   const isUser = message.sender === "user";
   const navigate = useNavigate();
   const { setChartData } = useVisualization();
@@ -54,15 +54,21 @@ export default function MessageBubble({ message }) {
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
       <div
-        className={`px-4 py-3 rounded-xl max-w-[80%] text-sm whitespace-pre-wrap break-words overflow-hidden ${
+        className={`px-4 py-3 rounded-2xl max-w-[80%] text-sm whitespace-pre-wrap break-words overflow-hidden shadow-sm ${
           isUser
             ? "bg-blue-600 text-white"
-            : "bg-neutral-800 text-neutral-200"
+            : isDark 
+              ? "bg-neutral-800 text-neutral-200" 
+              : "bg-gray-100 text-gray-800 border border-gray-200"
         }`}
       >
         {!isUser && message.mode && (
-          <div className="text-xs mb-2 opacity-60 uppercase tracking-wide">
-            {message.mode}
+          <div className={`text-xs mb-2 uppercase tracking-wide font-medium ${
+            message.mode === "sql" 
+              ? "text-blue-400" 
+              : isDark ? "text-green-400" : "text-green-600"
+          }`}>
+            {message.mode === "sql" ? "📊 SQL Query" : "📖 Documentation"}
           </div>
         )}
 
@@ -72,9 +78,14 @@ export default function MessageBubble({ message }) {
           <div className="mt-4 space-y-4">
 
             {/* SQL Block */}
-            <div className="bg-black text-green-400 p-3 rounded-lg text-xs overflow-x-auto relative">
+            <div className={`p-3 rounded-lg text-xs overflow-x-auto relative ${
+              isDark ? "bg-black text-green-400" : "bg-gray-900 text-green-400"
+            }`}>
               <div className="flex justify-between items-center mb-2">
-                <div className="text-white font-semibold">
+                <div className="text-white font-semibold flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
                   SQL Query
                 </div>
 
@@ -82,8 +93,8 @@ export default function MessageBubble({ message }) {
                   onClick={copySQL}
                   className={`text-xs px-2 py-1 rounded transition ${
                     copied
-                      ? "bg-green-600 text-white"
-                      : "bg-neutral-700 hover:bg-neutral-600"
+                      ? "bg-green-500 text-white"
+                      : "bg-gray-200 text-gray-800 hover:bg-gray-300"
                   }`}
                 >
                   {copied ? "Copied ✓" : "Copy"}
@@ -95,11 +106,13 @@ export default function MessageBubble({ message }) {
 
             {/* Explanation */}
             {message.explanation && (
-              <div className="bg-neutral-700 p-3 rounded-lg text-xs">
-                <div className="font-semibold mb-1">
-                  Explanation
+              <div className="bg-blue-50 dark:bg-neutral-700 border border-blue-200 dark:border-neutral-600 p-3 rounded-lg text-xs text-primary">
+                <div className="font-semibold mb-1 text-blue-700 dark:text-blue-300">
+                  💡 Explanation
                 </div>
-                {message.explanation}
+                <div className="text-gray-700 dark:text-gray-200">
+                  {message.explanation}
+                </div>
               </div>
             )}
 
@@ -108,34 +121,34 @@ export default function MessageBubble({ message }) {
               <div className="overflow-x-auto">
 
                 <div className="flex justify-between items-center mb-2">
-                  <div className="text-xs font-semibold">
+                  <div className="text-xs font-semibold text-primary">
                     Query Result
                   </div>
 
                   <div className="flex gap-2">
                     <button
                       onClick={exportCSV}
-                      className="text-xs bg-neutral-700 px-2 py-1 rounded hover:bg-neutral-600 transition"
+                      className="text-xs bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-neutral-600 px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-neutral-600 transition"
                     >
                       Export CSV
                     </button>
 
                     <button
                       onClick={generateChart}
-                      className="text-xs bg-blue-600 px-2 py-1 rounded hover:bg-blue-500 transition"
+                      className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-500 transition"
                     >
                       Generate Chart
                     </button>
                   </div>
                 </div>
 
-                <table className="text-xs border border-neutral-700 w-full">
+                <table className="text-xs border border-gray-300 dark:border-neutral-700 w-full">
                   <thead>
-                    <tr className="bg-neutral-900">
+                    <tr className="bg-gray-100 dark:bg-neutral-800">
                       {message.result.columns.map((col, idx) => (
                         <th
                           key={idx}
-                          className="border border-neutral-700 px-3 py-2 text-left"
+                          className="border border-gray-300 dark:border-neutral-700 px-3 py-2 text-left text-gray-900 dark:text-gray-100 font-semibold"
                         >
                           {col}
                         </th>
@@ -145,11 +158,11 @@ export default function MessageBubble({ message }) {
 
                   <tbody>
                     {message.result.rows.map((row, rIndex) => (
-                      <tr key={rIndex} className="hover:bg-neutral-700/50">
+                      <tr key={rIndex} className="bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-700/50">
                         {row.map((cell, cIndex) => (
                           <td
                             key={cIndex}
-                            className="border border-neutral-700 px-3 py-2"
+                            className="border border-gray-300 dark:border-neutral-700 px-3 py-2 text-gray-800 dark:text-gray-200"
                           >
                             {String(cell)}
                           </td>

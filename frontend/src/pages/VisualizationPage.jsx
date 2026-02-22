@@ -29,11 +29,11 @@ export default function VisualizationPage() {
 
   if (!chartData) {
     return (
-      <div className="p-10 text-white bg-neutral-900 min-h-screen">
+      <div className="p-10 text-primary bg-primary min-h-screen">
         No data available.
         <button
           onClick={() => navigate("/chat")}
-          className="ml-4 bg-blue-600 px-3 py-1 rounded"
+          className="ml-4 bg-blue-600 text-white px-3 py-1 rounded"
         >
           Go Back
         </button>
@@ -79,11 +79,11 @@ export default function VisualizationPage() {
 
   if (!numericColumns.length) {
     return (
-      <div className="p-10 text-white bg-neutral-900 min-h-screen">
+      <div className="p-10 text-primary bg-primary min-h-screen">
         No numeric column found.
         <button
           onClick={() => navigate("/chat")}
-          className="ml-4 bg-blue-600 px-3 py-1 rounded"
+          className="ml-4 bg-blue-600 text-white px-3 py-1 rounded"
         >
           Go Back
         </button>
@@ -134,13 +134,13 @@ export default function VisualizationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-900 text-white p-8">
+    <div className="min-h-screen bg-primary text-primary p-8">
 
       <h2 className="text-xl font-semibold mb-2">
         Data Visualization
       </h2>
 
-      <div className="mb-4 text-sm text-blue-400">
+      <div className="mb-4 text-sm text-accent">
         💡 Suggested Chart: {chartType.toUpperCase()}
       </div>
 
@@ -150,7 +150,7 @@ export default function VisualizationPage() {
         <select
           value={chartType}
           onChange={(e) => setChartType(e.target.value)}
-          className="bg-neutral-800 px-4 py-2 rounded"
+          className="bg-surface text-primary px-4 py-2 rounded border border-primary"
         >
           <option value="bar">Bar</option>
           <option value="line">Line</option>
@@ -160,7 +160,7 @@ export default function VisualizationPage() {
         <select
           value={xColumn}
           onChange={(e) => setXColumn(e.target.value)}
-          className="bg-neutral-800 px-4 py-2 rounded"
+          className="bg-surface text-primary px-4 py-2 rounded border border-primary"
         >
           {columns.map((col) => (
             <option key={col} value={col}>
@@ -172,7 +172,7 @@ export default function VisualizationPage() {
         <select
           value={yColumn}
           onChange={(e) => setYColumn(e.target.value)}
-          className="bg-neutral-800 px-4 py-2 rounded"
+          className="bg-surface text-primary px-4 py-2 rounded border border-primary"
         >
           {numericColumns.map((col) => (
             <option key={col} value={col}>
@@ -184,14 +184,14 @@ export default function VisualizationPage() {
         <div className="flex gap-2">
           <button
             onClick={downloadPNG}
-            className="bg-green-600 px-3 py-2 rounded text-xs"
+            className="bg-green-600 text-white px-3 py-2 rounded text-xs"
           >
             Download PNG
           </button>
 
           <button
             onClick={downloadPDF}
-            className="bg-purple-600 px-3 py-2 rounded text-xs"
+            className="bg-purple-600 text-white px-3 py-2 rounded text-xs"
           >
             Download PDF
           </button>
@@ -255,7 +255,7 @@ export default function VisualizationPage() {
 
       <button
         onClick={() => navigate("/chat")}
-        className="mt-6 bg-blue-600 px-4 py-2 rounded"
+        className="mt-6 bg-blue-600 text-white px-4 py-2 rounded"
       >
         Back to Chat
       </button>

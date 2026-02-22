@@ -36,9 +36,9 @@ export default function Signup() {
         onSubmit={handleSignup}
       />
 
-      <p className="text-center text-sm text-gray-400 mt-4">
+      <p className="text-center text-sm text-secondary mt-4">
         Already have an account?{" "}
-        <Link to="/login" className="text-blue-400 hover:underline">
+        <Link to="/login" className="text-accent hover:underline">
           Login
         </Link>
       </p>
