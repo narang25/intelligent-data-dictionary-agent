@@ -6,7 +6,7 @@ class VectorSearchService:
     def __init__(self, engine):
         self.engine = engine
 
-    def search(self, query_vector, top_k=3):
+    def search(self, query_vector, top_k=10):
 
         # Convert Python list → pgvector string format
         vector_str = "[" + ",".join(map(str, query_vector)) + "]"

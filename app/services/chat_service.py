@@ -93,6 +93,81 @@ class ChatService:
         return self._rag_reasoning(question, session_id)
 
     # ==================================================
+    # LIST SCHEMA TABLES HELPER
+    # ==================================================
+    def _list_schema_tables(self, question: str, session_id: int, schema_name: str):
+        from sqlalchemy import text
+
+        # Query all tables in the schema
+        query = text("""
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = :schema
+            AND table_type = 'BASE TABLE'
+            ORDER BY table_name;
+        """)
+
+        with self.engine.connect() as conn:
+            result = conn.execute(query, {"schema": schema_name})
+            tables = [row[0] for row in result.fetchall()]
+
+        # Build documentation context for each table
+        context_text = f"**Tables in the {schema_name} schema:**\n\n"
+
+        for table_name in tables:
+            # Search for documentation by table name in description
+            full_table_name = f"{schema_name}.{table_name}"
+            doc = (
+                self.session.query(Documentation)
+                .filter(Documentation.entity_type == "table")
+                .filter(Documentation.description.ilike(f"%{full_table_name}%"))
+                .first()
+            )
+
+            context_text += f"### {full_table_name}\n"
+            if doc:
+                context_text += f"{doc.description}\n\n"
+            else:
+                context_text += "(No documentation available)\n\n"
+
+        history = self._get_recent_history(session_id)
+
+        system_prompt = """
+You are an enterprise data architect AI assistant.
+
+List all tables in the requested schema with their documentation.
+Format the response clearly with table names and their summaries.
+Extract and present the key information: summary, business_purpose, and columns if available.
+"""
+
+        user_prompt = f"""
+Conversation History:
+{history}
+
+Context:
+{context_text}
+
+Question:
+{question}
+"""
+
+        response = self.ai_service.generate(system_prompt, user_prompt)
+
+        assistant_message = ChatMessage(
+            session_id=session_id,
+            role="assistant",
+            content=response
+        )
+        self.session.add(assistant_message)
+        self.session.commit()
+
+        return {
+            "session_id": session_id,
+            "mode": "rag",
+            "answer": response
+        }
+
+    # ==================================================
     # MEMORY HELPER
     # ==================================================
     def _get_recent_history(self, session_id, limit=5):
@@ -195,6 +270,13 @@ Rows: {execution['rows']}
     # RAG MODE
     # ==================================================
     def _rag_reasoning(self, question: str, session_id: int):
+        from sqlalchemy import text
+
+        q_lower = question.lower()
+
+        # Special handling for "list tables in schema" queries
+        if any(keyword in q_lower for keyword in ["tables in olist", "olist tables", "olist schema", "tables of olist", "tell me tables"]):
+            return self._list_schema_tables(question, session_id, "olist")
 
         query_vector = self.embedding_service.generate_embedding(question)
         results = self.vector_search.search(query_vector)
