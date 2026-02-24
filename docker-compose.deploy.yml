@@ -1,0 +1,62 @@
+services:
+
+  api:
+    image: narang25/idd-api:latest
+    container_name: jarvis_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/intelligent_dictionary
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      SECRET_KEY: ${SECRET_KEY}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  worker:
+    image: narang25/idd-api:latest
+    container_name: jarvis_worker
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=1
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/intelligent_dictionary
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      GROQ_API_KEY: ${GROQ_API_KEY}
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  db:
+    image: ankane/pgvector
+    container_name: jarvis_db
+    environment:
+      POSTGRES_DB: intelligent_dictionary
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:7
+    container_name: jarvis_redis
+    command: redis-server --maxmemory 50mb --maxmemory-policy allkeys-lru
+    restart: always
+
+  frontend:
+    image: narang25/idd-frontend:latest
+    container_name: jarvis_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: always
+
+volumes:
+  postgres_data:
