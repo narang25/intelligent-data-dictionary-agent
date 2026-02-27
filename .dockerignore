@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+.git
+.env
+frontend
+datasets
+app/datasets
+*.egg-info
+.venv
+venv
+node_modules
+.DS_Store

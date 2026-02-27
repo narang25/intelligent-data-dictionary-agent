@@ -1,28 +1,15 @@
 import { useNavigate, Link } from "react-router-dom";
 import AuthForm from "../components/Auth/AuthForm";
+import { signupUser } from "../services/api";
 
 export default function Signup() {
   const navigate = useNavigate();
 
   const handleSignup = async (email, password) => {
     try {
-      const response = await fetch("http://localhost:8000/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Signup failed");
-      }
-
+      await signupUser(email, password);
       alert("Signup successful. Please login.");
       navigate("/login");
-
     } catch (err) {
       alert(err.message);
     }
