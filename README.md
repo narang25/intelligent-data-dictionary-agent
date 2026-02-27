@@ -1,3 +1,65 @@
+# API Endpoints
+
+The backend exposes a set of RESTful API endpoints, all prefixed with `/api/` (proxied via Nginx in production):
+
+| Endpoint                | Method | Description                                 |
+|------------------------|--------|---------------------------------------------|
+| `/api/health`          | GET    | Health check for all services               |
+| `/api/auth/signup`     | POST   | User registration                          |
+| `/api/auth/login`      | POST   | User authentication                        |
+| `/api/chat`            | POST   | Conversational interface (SQL, docs, RAG)   |
+| `/api/docs`            | GET    | Documentation search                        |
+| `/api/profiling`       | GET    | Data profiling and statistics               |
+
+---
+
+# Frontend
+
+The frontend is a modern, single-page application built with React 18, Vite, TailwindCSS, React Router, and Recharts. Key features include:
+- Responsive design with dark/light theme support
+- Conversational chat interface for SQL and documentation
+- Schema explorer and documentation viewer
+- All API requests are routed through `/api/` (Nginx reverse proxy)
+
+---
+
+# Dataset
+
+IDD uses the Olist Brazilian E-commerce dataset for demonstration and benchmarking. The dataset includes the following tables:
+- olist_customers_dataset.csv
+- olist_sellers_dataset.csv
+- olist_products_dataset.csv
+- olist_orders_dataset.csv
+- olist_order_items_dataset.csv
+- olist_order_payments_dataset.csv
+- olist_order_reviews_dataset.csv
+- olist_geolocation_dataset.csv
+
+This dataset provides a realistic, relational schema for testing AI-powered SQL generation, documentation, and profiling features.
+
+---
+
+# Environment Variables
+
+The following environment variables are required for configuration:
+
+| Variable         | Description                                 |
+|------------------|---------------------------------------------|
+| `DB_PASSWORD`    | PostgreSQL database password                |
+| `GROQ_API_KEY`   | Groq LLM API key                           |
+| `SECRET_KEY`     | FastAPI application secret                  |
+| `CORS_ORIGINS`   | Allowed CORS origins (comma-separated list) |
+
+---
+
+# Credits
+
+This project was developed with contributions and support from the open-source community. Special thanks to **vanshikataya** for their significant contributions and support.
+
+- [Olist Brazilian E-commerce Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
+- [Groq LLM API](https://console.groq.com/)
+- [Sentence Transformers](https://www.sbert.net/)
+- [pgvector](https://github.com/pgvector/pgvector)
 # Motivation
 
 Modern data teams face challenges in understanding, documenting, and querying complex data warehouses. IDD addresses these challenges by combining AI-driven documentation, semantic search, and natural language interfaces, enabling:
@@ -118,73 +180,8 @@ bash deploy/init-data.sh
 ```
 
 
-## Production Deployment (EC2 Example)
-
-1. **Build and Push Images**
-
-```bash
-docker buildx build --platform linux/amd64 -t narang25/idd-api:latest --push .
-docker buildx build --platform linux/amd64 -t narang25/idd-frontend:latest --push ./frontend
-```
-
-2. **Provision EC2 (Ubuntu 24.04, t2.micro+)**
 
 
-3. **Copy deployment files**
-
-```bash
-scp docker-compose.deploy.yml ubuntu@<EC2_IP>:~/
-scp -r deploy/ ubuntu@<EC2_IP>:~/
-```
-
-4. **Create `.env` on EC2**
-
-```bash
-cat > ~/.env << EOF
-DB_PASSWORD=...
-GROQ_API_KEY=...
-SECRET_KEY=...
-CORS_ORIGINS=http://<EC2_IP>
-EOF
-```
-
-5. **Start services**
-
-```bash
-docker compose -f docker-compose.deploy.yml pull
-docker compose -f docker-compose.deploy.yml up -d
-```
-
-6. **Initialize data**
-
-```bash
-bash ~/deploy/init-data.sh
-```
-
-
-## API Endpoints
-
-
-
-## Frontend
-
-
-
-## Dataset
-
-
-
-## Environment Variables
-
-
-
-## Credits
-
-
-
-## License
-
-MIT
 
 # Intelligent Data Dictionary (IDD)
 
