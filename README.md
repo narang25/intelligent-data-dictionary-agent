@@ -107,7 +107,7 @@ A: Not out-of-the-box, but the architecture allows for extension to multi-tenant
 # Contact & Support
 
 - For issues, please use the GitHub Issues tracker.
-- For feature requests or partnership inquiries, contact the maintainer at [nikhil.narang25@gmail.com](mailto:nikhil.narang25@gmail.com)
+- For feature requests or partnership inquiries, contact the maintainer at [nikhilnarang2505@gmail.com](mailto:nikhil.narang25@gmail.com)
 
 ---
 # Intelligent Data Dictionary (IDD)
