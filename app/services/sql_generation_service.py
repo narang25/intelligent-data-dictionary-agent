@@ -55,16 +55,19 @@ class SQLGenerationService:
     # ------------------------------------------------
     # Generate SQL using LLM
     # ------------------------------------------------
-    def generate_sql(self, schema_context: str, question: str):
+    def generate_sql(self, question: str, schema_context: str, dialect: str = "postgresql"):
 
-        system_prompt = """
-You are a senior PostgreSQL database architect.
+        system_prompt = f"""
+You are a senior database architect.
 
 CRITICAL RULES:
-1. You MUST use SCHEMA-QUALIFIED table names (e.g., olist.orders, olist.customers)
-2. You MUST ONLY use columns from the CORRECT table - check which table has each column!
-3. You MUST NOT invent or assume column names
-4. When "olist" is mentioned, it refers to the SCHEMA name, not a table
+1. Generate SQL for {dialect} dialect.
+   For snowflake: use double-quote identifiers and ILIKE for case-insensitive.
+   For mysql: use backtick quoting and LIMIT syntax.
+   For postgresql: use standard ANSI SQL with pgcrypto extensions available.
+2. You MUST use SCHEMA-QUALIFIED table names (e.g., olist.orders, olist.customers)
+3. You MUST ONLY use columns from the CORRECT table - check which table has each column!
+4. You MUST NOT invent or assume column names
 
 === EXACT OLIST SCHEMA (USE ONLY THESE COLUMNS) ===
 
@@ -279,45 +282,162 @@ Respond with JSON only:
     # ------------------------------------------------
     # Safe Execution
     # ------------------------------------------------
-    def execute_safe_query(self, engine, sql: str):
+    def execute_safe_query(self, engine_or_connector, sql: str, user=None, session=None):
+
+        # Step 0: Enforce Guardrails
+        if user and session:
+            from app.domain.models import ColumnPermission
+            role = getattr(user, 'role', 'analyst') or 'analyst'
+            restricted = session.query(ColumnPermission).filter_by(role=role, allow=False).all()
+            sql_lower = sql.lower()
+            for r in restricted:
+                if r.column_name.lower() in sql_lower:
+                    return {"error": f"Guardrail blocked query: You do not have permission to access restricted column '{r.column_name}'."}
 
         # Step 1: Basic validation
         if not self.validate_sql(sql):
             return {"error": "Unsafe or invalid SQL detected."}
 
-        # Step 2: Column validation
-        valid, error = self.validate_sql_columns(engine, sql)
-        if not valid:
-            return {"error": error}
-
-        # Step 3: Enforce LIMIT
+        # Step 2: Enforce LIMIT
         sql = self.enforce_limit(sql)
 
         try:
-            with engine.connect() as conn:
-                result = conn.execute(text(sql))
-                rows = result.fetchall()
-                columns = result.keys()
+            from app.connectors.base import BaseConnector
+            if isinstance(engine_or_connector, BaseConnector):
+                result = engine_or_connector.execute_query(sql)
+                if result.error:
+                    return {"error": result.error}
+                return {
+                    "columns": result.columns,
+                    "rows": result.rows
+                }
+            else:
+                # Fallback to SQLAlchemy Engine (for test DB or old functionality)
+                with engine_or_connector.connect() as conn:
+                    result = conn.execute(text(sql))
+                    rows = result.fetchall()
+                    columns = result.keys()
 
-            return {
-                "columns": list(columns),
-                "rows": [list(row) for row in rows]
-            }
+                return {
+                    "columns": list(columns),
+                    "rows": [list(row) for row in rows]
+                }
 
         except Exception as e:
             return {"error": str(e)}
+
+    # ------------------------------------------------
+    # Confidence Scoring
+    # ------------------------------------------------
+    def compute_confidence(self, sql: str, session, question: str) -> dict:
+        """
+        Compute a confidence score for generated SQL based on:
+        1. Schema coverage — do referenced tables/columns exist?
+        2. FK-backed joins — are JOINs supported by foreign keys?
+        3. Question ambiguity — is the question clear?
+        Returns: { score: 0-100, uncertain_columns, uncertain_joins, warning }
+        """
+        from app.domain.models import Table, ColumnModel, Relationship
+
+        score = 100
+        uncertain_columns = []
+        uncertain_joins = []
+        warning = None
+
+        if not sql:
+            return {"score": 0, "uncertain_columns": [], "uncertain_joins": [], "warning": "No SQL generated"}
+
+        sql_lower = sql.lower()
+
+        # --- 1. Check table/column coverage ---
+        # Extract table references
+        table_pattern = r'(?:from|join)\s+([a-zA-Z_][a-zA-Z0-9_]*\.?[a-zA-Z_][a-zA-Z0-9_]*)'
+        table_matches = re.findall(table_pattern, sql_lower)
+
+        # Extract column references (simplified)
+        col_pattern = r'(?:select|where|on|group\s+by|order\s+by|having)\s+.*?(?:from|join|where|group|order|having|limit|$)'
+        
+        all_tables = session.query(Table).all()
+        known_table_names = set()
+        known_columns = {}
+        for t in all_tables:
+            schema_name = t.schema.name if t.schema else ""
+            full_name = f"{schema_name}.{t.name}".lower()
+            known_table_names.add(full_name)
+            known_table_names.add(t.name.lower())
+            for col in t.columns:
+                known_columns.setdefault(full_name, set()).add(col.name.lower())
+                known_columns.setdefault(t.name.lower(), set()).add(col.name.lower())
+
+        for tbl in table_matches:
+            if tbl.lower() not in known_table_names:
+                score -= 15
+                warning = f"Table '{tbl}' may not exist in the schema"
+
+        # --- 2. Check FK-backed joins ---
+        join_pattern = r'join\s+(\S+)\s+\w+\s+on\s+(\S+)\s*=\s*(\S+)'
+        join_matches = re.findall(join_pattern, sql_lower)
+        
+        all_rels = session.query(Relationship).all()
+        fk_pairs = set()
+        for rel in all_rels:
+            fk_pairs.add((rel.source_table.lower(), rel.source_column.lower(),
+                         rel.target_table.lower(), rel.target_column.lower()))
+            fk_pairs.add((rel.target_table.lower(), rel.target_column.lower(),
+                         rel.source_table.lower(), rel.source_column.lower()))
+
+        for joined_table, left_col, right_col in join_matches:
+            # Extract just column names (strip aliases like o.order_id)
+            left_parts = left_col.split(".")
+            right_parts = right_col.split(".")
+            l_col = left_parts[-1]
+            r_col = right_parts[-1]
+            
+            # Check if any FK relationship covers this join
+            has_fk = False
+            for st, sc, tt, tc in fk_pairs:
+                if (sc == l_col and tc == r_col) or (sc == r_col and tc == l_col):
+                    has_fk = True
+                    break
+            if not has_fk:
+                score -= 10
+                uncertain_joins.append(f"{left_col} = {right_col}")
+
+        # --- 3. Question ambiguity ---
+        ambiguous_words = ["maybe", "perhaps", "something like", "sort of", "kind of", "probably", "might"]
+        q_lower = question.lower()
+        for word in ambiguous_words:
+            if word in q_lower:
+                score -= 5
+                if not warning:
+                    warning = "The question contains ambiguous language"
+                break
+
+        # Clamp score
+        score = max(0, min(100, score))
+
+        return {
+            "score": score,
+            "uncertain_columns": uncertain_columns,
+            "uncertain_joins": uncertain_joins,
+            "warning": warning,
+        }
 
 
 # ------------------------------------------------
 # Build Schema Context Helper
 # ------------------------------------------------
-def build_schema_context(session):
+def build_schema_context(self, session, connection_id=None):
 
-    from app.domain.models import Table, Relationship, Documentation
+    from app.domain.models import Table, Relationship, Documentation, Annotation, Schema
 
     context = ""
 
-    tables = session.query(Table).all()
+    table_query = session.query(Table)
+    if connection_id:
+        table_query = table_query.join(Schema).filter(Schema.connection_id == connection_id)
+
+    tables = table_query.all()
 
     for table in tables:
 
@@ -335,6 +455,11 @@ def build_schema_context(session):
             description = ""
             if doc and doc.description:
                 description = f" -> {doc.description}"
+
+            annotations = session.query(Annotation).filter_by(table_name=table.name, column_name=column.name).all()
+            if annotations:
+                notes = " | ".join([a.content for a in annotations])
+                description += f" [Team Notes: {notes}]"
 
             context += f"- {column.name} ({column.data_type}){description}\n"
 

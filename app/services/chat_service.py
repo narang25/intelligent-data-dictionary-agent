@@ -66,7 +66,7 @@ class ChatService:
     # ==================================================
     # MAIN ENTRY
     # ==================================================
-    def ask(self, question: str, session_id: int = None):
+    def ask(self, question: str, session_id: int = None, user=None, connection_id: str = None):
 
         # Create session if not provided
         if not session_id:
@@ -88,9 +88,9 @@ class ChatService:
         intent = self._detect_intent(question)
 
         if intent == "sql":
-            return self._handle_sql_mode(question, session_id)
+            return self._handle_sql_mode(question, session_id, user, connection_id)
 
-        return self._rag_reasoning(question, session_id)
+        return self._rag_reasoning(question, session_id, connection_id)
 
     # ==================================================
     # LIST SCHEMA TABLES HELPER
@@ -191,17 +191,23 @@ Question:
     # ==================================================
     # SQL MODE
     # ==================================================
-    def _handle_sql_mode(self, question: str, session_id: int):
+    def _handle_sql_mode(self, question: str, session_id: int, user=None, connection_id: str = None):
 
         from app.services.sql_generation_service import (
             SQLGenerationService,
             build_schema_context
         )
+        from app.connectors.registry import registry
 
         sql_service = SQLGenerationService(self.ai_service)
-        schema_context = build_schema_context(self.session)
+        connector = registry.get_connector(self.session, connection_id) if connection_id else None
 
-        sql_response = sql_service.generate_sql(schema_context, question)
+        # 1. Build context using connector if available
+        context = sql_service.build_schema_context(self.session, connection_id=connection_id)
+
+        # 2. Generate SQL
+        dialect = connector.dialect if connector else "postgresql"
+        sql_response = sql_service.generate_sql(question, context, dialect=dialect)
 
         if "error" in sql_response:
             return {
@@ -213,13 +219,20 @@ Question:
         sql_query = sql_response.get("sql")
         explanation = sql_response.get("explanation")
 
-        execution = sql_service.execute_safe_query(self.engine, sql_query)
+        # Compute confidence score
+        try:
+            confidence = sql_service.compute_confidence(sql_query, self.session, question)
+        except Exception:
+            confidence = {"score": 50, "uncertain_columns": [], "uncertain_joins": [], "warning": None}
+
+        execution = sql_service.execute_safe_query(connector or self.engine, sql_query, user=user, session=self.session)
 
         if "error" in execution:
             return {
                 "session_id": session_id,
                 "mode": "sql",
-                "answer": execution["error"]
+                "answer": execution["error"],
+                "confidence": confidence,
             }
 
         history = self._get_recent_history(session_id)
@@ -256,21 +269,23 @@ Rows: {execution['rows']}
         self.session.add(assistant_message)
         self.session.commit()
 
-        # ✅ FULL SQL RESPONSE
+        # ✅ FULL SQL RESPONSE WITH CONFIDENCE
         return {
             "session_id": session_id,
             "mode": "sql",
             "answer": summary,
             "sql": sql_query,
             "explanation": explanation,
-            "result": execution
+            "result": execution,
+            "confidence": confidence,
         }
 
     # ==================================================
     # RAG MODE
     # ==================================================
-    def _rag_reasoning(self, question: str, session_id: int):
-        from sqlalchemy import text
+    def _rag_reasoning(self, question: str, session_id: int, connection_id: str = None):
+        # from app.services.vector_search_service import VectorSearchService # Removed as it's already imported and instantiated in __init__
+        # vector_search = VectorSearchService(self.session) # Removed as it's already instantiated in __init__
 
         q_lower = question.lower()
 
@@ -278,8 +293,9 @@ Rows: {execution['rows']}
         if any(keyword in q_lower for keyword in ["tables in olist", "olist tables", "olist schema", "tables of olist", "tell me tables"]):
             return self._list_schema_tables(question, session_id, "olist")
 
+        # 1. Search for relevant context using connection_id
         query_vector = self.embedding_service.generate_embedding(question)
-        results = self.vector_search.search(query_vector)
+        results = self.vector_search.search(query_vector, connection_id=connection_id)
 
         context_text = ""
         seen = set()

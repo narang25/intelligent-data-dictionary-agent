@@ -175,6 +175,7 @@ export default function useChats() {
         sql: response.sql || null,
         explanation: response.explanation || null,
         result: response.result || null,
+        confidence: response.confidence || null,
       };
 
       updateMessages([

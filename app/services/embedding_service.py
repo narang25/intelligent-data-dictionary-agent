@@ -39,11 +39,12 @@ class EmbeddingService:
     def generate_embedding(self, text: str):
         return self.model.encode(text).tolist()
 
-    def store_embedding(self, entity_type: str, entity_id: int, text: str):
+    def store_embedding(self, entity_type: str, entity_id: int, text: str, connection_id: str = None):
 
         vector = self.generate_embedding(text)
 
         embedding = Embedding(
+            connection_id=connection_id,
             entity_type=entity_type,
             entity_id=entity_id,
             vector=vector

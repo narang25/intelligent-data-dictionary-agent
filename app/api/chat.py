@@ -21,7 +21,11 @@ def chat_endpoint(
         ai_service = AIService()
         chat_service = ChatService(engine, db, ai_service)
 
-        result = chat_service.ask(request.question)
+        result = chat_service.ask(
+            request.question, 
+            user=current_user,
+            connection_id=request.connection_id
+        )
 
         if result.get("mode") == "sql":
             return ChatResponse(
@@ -33,7 +37,8 @@ def chat_endpoint(
                 result=SQLResult(
                     columns=result["result"]["columns"],
                     rows=result["result"]["rows"]
-                ) if result.get("result") else None
+                ) if result.get("result") else None,
+                confidence=result.get("confidence"),
             )
 
         return ChatResponse(

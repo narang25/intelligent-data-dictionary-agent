@@ -21,6 +21,8 @@ class DocumentationService:
                 "name": column.name,
                 "data_type": column.data_type,
                 "is_nullable": column.is_nullable,
+                "is_primary_key": column.is_primary_key,
+                "is_foreign_key": column.is_foreign_key,
                 "null_percentage": profile.null_percentage if profile else None,
                 "distinct_count": profile.distinct_count if profile else None
             })
@@ -31,30 +33,29 @@ class DocumentationService:
         context = self.build_table_context(table)
 
         system_prompt = """
-You are a senior data architect.
-Generate structured JSON documentation for a database table.
+You are a Staff-Level Enterprise Data Architect. Your task is to generate 99.9% accurate, strictly schema-grounded documentation for database tables. 
 
-Return ONLY valid JSON in this format:
+CRITICAL INSTRUCTIONS:
+1. NO HALLUCINATIONS: Do not guess business meaning if the column names do not obviously imply it. Stick to the facts.
+2. SCHEMA GROUNDING: Explicitly mention Primary Keys (PK), Foreign Keys (FK), and nullability in your breakdown. Rely ONLY on the provided schema metadata and profiles.
+3. CONTEXTUAL ACCURACY: If a table is a join table, dimension table, or fact table, state that clearly.
+4. JSON FORMAT ONLY: You MUST output exactly and only valid JSON matching this schema:
 {
-  "summary": "...",
-  "business_purpose": "...",
-  "data_quality_notes": "...",
-  "recommended_usage": "..."
+  "summary": "Precise 2-sentence technical summary of the table's role.",
+  "business_purpose": "The exact business function this table serves, based STRICTLY on its name and columns.",
+  "data_quality_notes": "Observations on nullability, distinct counts, or constraints based ONLY on the metadata.",
+  "recommended_usage": "When and how data analysts should query this table."
 }
 """
 
-        user_prompt = f"""
-Table Metadata:
-{json.dumps(context, indent=2)}
-"""
+        user_prompt = f"Strict Schema Metadata:\n{json.dumps(context, indent=2)}"
 
-        response = self.ai_service.generate(system_prompt, user_prompt)
+        response = self.ai_service.generate(system_prompt, user_prompt, json_mode=True)
         clean_response = response.strip()
 
         # Remove markdown code fences if present
         if clean_response.startswith("```"):
-            clean_response = clean_response.split("```")[1]
-            clean_response = clean_response.replace("json", "").strip()
+            clean_response = clean_response.split("```")[1].replace("json", "").strip()
 
         try:
             parsed = json.loads(clean_response)

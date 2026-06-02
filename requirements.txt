@@ -70,6 +70,13 @@ zstandard==0.25.0
 pandas
 
 # =========================
+# Database Drivers
+# =========================
+pymysql
+pymongo
+snowflake-sqlalchemy
+
+# =========================
 # AI / ML
 # =========================
 sentence-transformers
@@ -83,3 +90,4 @@ passlib[bcrypt]
 bcrypt==3.2.2
 python-jose[cryptography]
 email-validator
+cryptography
