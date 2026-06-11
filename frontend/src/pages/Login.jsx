@@ -9,7 +9,9 @@ export default function Login() {
     try {
       const data = await loginUser(email, password);
       localStorage.setItem("token", data.access_token);
-      navigate("/chat");
+      // Dispatch event so ConnectionContext picks up the new token
+      window.dispatchEvent(new Event("auth-change"));
+      navigate("/quick-start");
     } catch (err) {
       alert(err.message);
     }

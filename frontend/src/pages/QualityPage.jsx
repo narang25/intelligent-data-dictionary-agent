@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useConnection } from "../context/ConnectionContext";
 import { getQualityScores, analyzeQuality } from "../services/api";
 
@@ -8,14 +8,16 @@ export default function QualityPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [expandedTable, setExpandedTable] = useState(null);
 
-  useEffect(() => {
-    if (activeConnection?.id) fetchQuality();
-  }, [activeConnection?.id]);
-
-  const fetchQuality = async () => {
+  const fetchQuality = useCallback(async () => {
+    setQuality(null);
+    setExpandedTable(null);
     try { setQuality(await getQualityScores(activeConnection.id)); }
     catch (err) { console.error(err); }
-  };
+  }, [activeConnection?.id]);
+
+  useEffect(() => {
+    if (activeConnection?.id) fetchQuality();
+  }, [fetchQuality, activeConnection?.id]);
 
   const runAnalysis = async () => {
     setAnalyzing(true);
@@ -48,10 +50,20 @@ export default function QualityPage() {
       {quality && (
         <div className="card p-5 rise">
           <div className="flex items-center gap-6">
-            {/* Big score number */}
-            <div className="text-center shrink-0" style={{ minWidth: 80 }}>
-              <p className="text-5xl font-bold mono" style={{ color: scoreColor }}>{score}</p>
-              <p className="text-[10px] uppercase tracking-wider mt-0.5" style={{ color: "var(--text-muted)" }}>Overall</p>
+            {/* Animated Donut Gauge */}
+            <div className="relative" style={{ width: 100, height: 100 }}>
+              <svg viewBox="0 0 100 100" width="100" height="100">
+                <circle className="donut-ring" cx="50" cy="50" r="40" strokeWidth="8" />
+                <circle className="donut-fill" cx="50" cy="50" r="40" strokeWidth="8"
+                  stroke={scoreColor}
+                  strokeDasharray={`${(score / 100) * 251.2} 251.2`}
+                  style={{ animationDelay: '0.3s' }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-bold mono" style={{ color: scoreColor }}>{score}</span>
+                <span className="text-[8px] uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Score</span>
+              </div>
             </div>
             {/* Full-width bar */}
             <div className="flex-1 space-y-2">
@@ -90,7 +102,8 @@ export default function QualityPage() {
             const ts = t.overall_score || 0;
             const tc = ts >= 80 ? "var(--teal)" : ts >= 60 ? "var(--accent)" : "var(--coral)";
             return (
-              <div key={t.table_name} className={`card overflow-hidden rise rise-${idx % 5}`}>
+              <div key={t.table_name} className={`card overflow-hidden rise rise-${idx % 5}`}
+                style={{ borderLeft: `3px solid ${tc}` }}>
                 <button onClick={() => setExpandedTable(expandedTable === t.table_name ? null : t.table_name)}
                   className="w-full px-4 py-3 flex items-center justify-between transition-all"
                   style={{ borderBottom: expandedTable === t.table_name ? "1px solid var(--border)" : "none" }}>

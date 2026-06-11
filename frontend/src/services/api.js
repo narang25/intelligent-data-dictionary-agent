@@ -92,6 +92,10 @@ export async function getOverview(connectionId) {
   return request(`${V1}/connections/${connectionId}/overview`);
 }
 
+export async function getRelationshipGraph(connectionId) {
+  return request(`${V1}/connections/${connectionId}/relationships`);
+}
+
 // =========================
 // Tables
 // =========================

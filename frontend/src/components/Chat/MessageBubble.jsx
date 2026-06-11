@@ -3,7 +3,7 @@ import { useVisualization } from "../../context/VisualizationContext";
 import { useNavigate } from "react-router-dom";
 import { explainSQL } from "../../services/api";
 
-export default function MessageBubble({ message, isDark = true }) {
+export default function MessageBubble({ message }) {
   const isUser = message.sender === "user";
   const navigate = useNavigate();
   const { setChartData } = useVisualization();
@@ -61,10 +61,16 @@ export default function MessageBubble({ message, isDark = true }) {
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
-      <div className="max-w-[80%] rounded-xl px-4 py-3 whitespace-pre-wrap break-words overflow-hidden"
+      {/* AI avatar */}
+      {!isUser && (
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mr-2.5 mt-1" style={{ background: "var(--accent-glow)", border: "1px solid var(--border-active)" }}>
+          <span className="text-xs">✨</span>
+        </div>
+      )}
+      <div className="max-w-[75%] rounded-xl px-4 py-3 whitespace-pre-wrap break-words overflow-hidden"
         style={isUser
-          ? { background: "var(--accent)", color: "var(--user-bubble-text)", fontSize: 14 }
-          : { background: "var(--bg-raised)", border: "1px solid var(--border)", color: "var(--text-primary)", fontSize: 14 }}>
+          ? { background: "linear-gradient(135deg, var(--accent), var(--accent-dim))", color: "var(--user-bubble-text)", fontSize: 14, borderBottomRightRadius: 4 }
+          : { background: "var(--bg-raised)", border: "1px solid var(--border)", color: "var(--text-primary)", fontSize: 14, borderTopLeftRadius: 4 }}>
 
         {/* Mode label + confidence badge */}
         {!isUser && message.mode && (

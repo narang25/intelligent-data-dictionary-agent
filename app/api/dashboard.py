@@ -67,3 +67,48 @@ def get_overview(
         total_relationships=total_relationships,
         schemas=schema_names,
     )
+
+
+@router.get("/{connection_id}/relationships")
+def get_all_relationships(
+    connection_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return all FK relationships for graph visualization."""
+    conn = (
+        db.query(DatabaseConnection)
+        .filter_by(id=connection_id, user_id=current_user.id, is_active=True)
+        .first()
+    )
+    if not conn:
+        raise HTTPException(status_code=404, detail="Connection not found")
+
+    schema_ids = [s.id for s in conn.schemas]
+    if not schema_ids:
+        return {"nodes": [], "edges": []}
+
+    tables = db.query(Table).filter(Table.schema_id.in_(schema_ids)).all()
+
+    # Build unique node set and edges
+    node_map = {}
+    edges = []
+
+    for t in tables:
+        fqn = f"{t.schema.name}.{t.name}" if t.schema else t.name
+        node_map[fqn] = {
+            "id": fqn,
+            "label": t.name,
+            "schema": t.schema.name if t.schema else "",
+            "row_count": t.row_count or 0,
+            "column_count": len(t.columns),
+        }
+        for r in t.relationships:
+            edges.append({
+                "source": fqn,
+                "target": r.target_table,
+                "source_column": r.source_column,
+                "target_column": r.target_column,
+            })
+
+    return {"nodes": list(node_map.values()), "edges": edges}

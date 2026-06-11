@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
-from app.core.security import jwt, SECRET_KEY, ALGORITHM
+from app.core.security import jwt, SECRET_KEY, ALGORITHM, JWTError
 from app.domain.models import User
 
 security = HTTPBearer()
@@ -26,8 +26,8 @@ def get_current_user(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email = payload.get("sub")
-    except:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
     user = db.query(User).filter_by(email=email).first()
 

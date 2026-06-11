@@ -111,7 +111,6 @@ export default function ConnectionsPage() {
   };
 
   const fields = getFieldsForType(form.db_type);
-  const selectedType = DB_TYPES.find(t => t.value === form.db_type);
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -127,50 +126,61 @@ export default function ConnectionsPage() {
         {/* Database Type Selector */}
         <div className="mb-5">
           <label className="block text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--text-muted)" }}>Database Type</label>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-4 gap-3">
             {DB_TYPES.map(t => (
               <button key={t.value} type="button" onClick={() => handleDbTypeChange(t.value)}
-                className="flex flex-col items-center gap-1.5 p-3 rounded-lg transition-all duration-150"
-                style={{
-                  background: form.db_type === t.value ? "var(--accent-glow)" : "var(--bg-surface)",
-                  border: form.db_type === t.value ? `1px solid ${t.color}` : "1px solid var(--border)",
-                }}>
-                <span className="text-lg">{t.icon}</span>
-                <span className="text-[11px] font-semibold" style={{ color: form.db_type === t.value ? t.color : "var(--text-secondary)" }}>{t.label}</span>
+                className={`radio-card ${form.db_type === t.value ? 'selected' : ''}`}>
+                <div className="check-icon">
+                  <svg width="10" height="10" fill="none" stroke="#0d0d0f" strokeWidth="3" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                </div>
+                <span className="text-2xl">{t.icon}</span>
+                <span className="text-[11px] font-semibold" style={{ color: form.db_type === t.value ? "var(--accent)" : "var(--text-secondary)" }}>{t.label}</span>
               </button>
             ))}
           </div>
         </div>
 
         <form onSubmit={handleCreate} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            {fields.map(({ name, label, placeholder, type, multiline }) => (
-              <div key={name} className={multiline ? "col-span-2" : ""}>
-                <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>{label}</label>
-                {multiline ? (
-                  <textarea name={name} value={form[name]} onChange={handleChange} placeholder={placeholder} rows={4}
-                    className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-all mono resize-none"
-                    style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
-                    onFocus={e => e.target.style.borderColor = "var(--border-active)"} onBlur={e => e.target.style.borderColor = "var(--border)"} />
-                ) : (
-                  <input name={name} type={type || "text"} value={form[name]} onChange={handleChange} placeholder={placeholder}
-                    required={name === "name" || name === "database"}
-                    className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-all mono"
-                    style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
-                    onFocus={e => e.target.style.borderColor = "var(--border-active)"} onBlur={e => e.target.style.borderColor = "var(--border)"} />
-                )}
+          {form.db_type === "snowflake" ? (
+            <div className="card p-8 flex flex-col items-center justify-center text-center rise" style={{ background: "var(--bg-raised)", border: "1px dashed var(--border-active)" }}>
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: "var(--ice-dim)", border: "1px solid rgba(96, 165, 250, 0.3)" }}>
+                <span className="text-2xl">❄️</span>
               </div>
-            ))}
-          </div>
+              <h3 className="text-base font-bold mb-1" style={{ color: "var(--text-bright)" }}>Snowflake Support Coming Soon</h3>
+              <p className="text-xs max-w-sm" style={{ color: "var(--text-muted)" }}>We are currently building native integration with Snowflake data warehouses. Stay tuned for updates!</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                {fields.map(({ name, label, placeholder, type, multiline }) => (
+                  <div key={name} className={multiline ? "col-span-2" : ""}>
+                    <label className="block text-xs font-semibold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>{label}</label>
+                    {multiline ? (
+                      <textarea name={name} value={form[name]} onChange={handleChange} placeholder={placeholder} rows={4}
+                        className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-all mono resize-none"
+                        style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+                        onFocus={e => e.target.style.borderColor = "var(--border-active)"} onBlur={e => e.target.style.borderColor = "var(--border)"} />
+                    ) : (
+                      <input name={name} type={type || "text"} value={form[name]} onChange={handleChange} placeholder={placeholder}
+                        required={name === "name" || name === "database"}
+                        className="w-full px-3 py-2.5 rounded-lg text-sm focus:outline-none transition-all mono"
+                        style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border)" }}
+                        onFocus={e => e.target.style.borderColor = "var(--border-active)"} onBlur={e => e.target.style.borderColor = "var(--border)"} />
+                    )}
+                  </div>
+                ))}
+              </div>
 
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={handleTest} disabled={testing} className="btn-ghost">
-              {testing ? <><div className="spinner"></div> Testing...</> : "Test Connection"}
-            </button>
-            <button type="submit" disabled={creating} className="btn-accent">
-              {creating ? <><div className="spinner"></div> Creating...</> : "Create Connection"}
-            </button>
-          </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={handleTest} disabled={testing} className="btn-ghost">
+                  {testing ? <><div className="spinner"></div> Testing...</> : "Test Connection"}
+                </button>
+                <button type="submit" disabled={creating} className="btn-accent">
+                  {creating ? <><div className="spinner"></div> Creating...</> : "Create Connection"}
+                </button>
+              </div>
+            </>
+          )}
 
           {testResult && (
             <div className="p-3 rounded-lg text-xs rise mono"
@@ -192,19 +202,27 @@ export default function ConnectionsPage() {
           <h2 className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Saved</h2>
           {connections.map(c => {
             const dbInfo = DB_TYPES.find(t => t.value === c.db_type) || DB_TYPES[0];
+            // Sync freshness indicator
+            const syncAge = c.last_synced ? Math.round((Date.now() - new Date(c.last_synced).getTime()) / 60000) : null;
+            const syncColor = syncAge === null ? "var(--text-muted)" : syncAge < 60 ? "var(--teal)" : syncAge < 1440 ? "var(--accent)" : "var(--coral)";
+            const syncLabel = syncAge === null ? "Never synced" : syncAge < 1 ? "Just now" : syncAge < 60 ? `${syncAge}m ago` : syncAge < 1440 ? `${Math.round(syncAge / 60)}h ago` : `${Math.round(syncAge / 1440)}d ago`;
             return (
               <div key={c.id} className="card px-4 py-3 flex items-center justify-between rise">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm" style={{ background: "var(--bg-surface)" }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: "var(--bg-surface)", border: "1px solid var(--border)" }}>
                     {dbInfo.icon}
                   </div>
                   <div>
                     <p className="text-xs font-semibold" style={{ color: "var(--text-bright)" }}>{c.name}</p>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 mt-0.5">
                       <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded" style={{ background: "var(--bg-hover)", color: dbInfo.color }}>{dbInfo.label}</span>
                       <span className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>
                         {c.db_type === "mongodb" ? (c.host || c.database) : `${c.host}${c.port ? ':' + c.port : ''}/${c.database}`}
                       </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ background: syncColor }}></div>
+                      <span className="text-[9px]" style={{ color: syncColor }}>{syncLabel}</span>
                     </div>
                   </div>
                 </div>

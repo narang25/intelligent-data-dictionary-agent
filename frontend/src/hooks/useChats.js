@@ -142,6 +142,7 @@ export default function useChats() {
     if (!activeChat) return;
 
     const userMessage = {
+      // eslint-disable-next-line react-hooks/purity
       id: Date.now(),
       sender: "user",
       text,
@@ -171,6 +172,7 @@ export default function useChats() {
       );
 
       const assistantMessage = {
+        // eslint-disable-next-line react-hooks/purity
         id: Date.now() + 1,
         sender: "assistant",
         text: response.answer,
@@ -191,6 +193,7 @@ export default function useChats() {
 
     } catch (error) {
       const errorMessage = {
+        // eslint-disable-next-line react-hooks/purity
         id: Date.now() + 2,
         sender: "assistant",
         text: error.message,

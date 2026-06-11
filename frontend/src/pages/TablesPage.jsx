@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useConnection } from "../context/ConnectionContext";
-import { listTables, getTableDetail, getSampleData, analyzeTable, analyzeQuality } from "../services/api";
+import { listTables, getTableDetail, getSampleData, analyzeTable } from "../services/api";
 
 export default function TablesPage() {
   const { activeConnection } = useConnection();
@@ -14,14 +14,23 @@ export default function TablesPage() {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [tab, setTab] = useState("schema");
 
-  useEffect(() => {
-    if (activeConnection?.id) fetchTables();
+  const fetchTables = useCallback(async () => {
+    try { 
+      setTables((await listTables(activeConnection.id, search)).tables || []);
+    } catch (err) { console.error(err); }
   }, [activeConnection?.id, search]);
 
-  const fetchTables = async () => {
-    try { setTables((await listTables(activeConnection.id, search)).tables || []); }
-    catch (err) { console.error(err); }
-  };
+  useEffect(() => {
+    if (activeConnection?.id) fetchTables();
+  }, [fetchTables, activeConnection?.id]);
+
+  // Clear selected table when connection changes
+  useEffect(() => {
+    setSelected(null);
+    setDetail(null);
+    setSampleData(null);
+    setTableAnalysis(null);
+  }, [activeConnection?.id]);
 
   const selectTable = async (name) => {
     setSelected(name); setTab("schema"); setSampleData(null); setTableAnalysis(null);
@@ -50,11 +59,10 @@ export default function TablesPage() {
       {/* Left panel — Table list */}
       <div className="w-[260px] min-w-[260px] card flex flex-col">
         <div className="p-3" style={{ borderBottom: "1px solid var(--border)" }}>
-          <div className="relative">
-            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2" width="14" height="14" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filter tables..."
-              className="w-full pl-8 pr-3 py-2 rounded-lg text-xs focus:outline-none mono"
-              style={{ background: "var(--bg-surface)", color: "var(--text-primary)", border: "1px solid var(--border)" }} />
+          <div className="search-bar">
+            <svg width="14" height="14" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tables..." />
+            <span className="shortcut-badge">⌘K</span>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
@@ -88,7 +96,7 @@ export default function TablesPage() {
             </div>
           </div>
         ) : detail ? (
-          <div className="rise space-y-4">
+          <div className="slide-down space-y-4">
             {/* Table header */}
             <div>
               <h2 className="text-lg font-bold mono" style={{ color: "var(--text-bright)" }}>
@@ -138,7 +146,11 @@ export default function TablesPage() {
                     {detail.columns?.map(c => (
                       <tr key={c.name} className="transition-colors" style={{ borderBottom: "1px solid var(--border)" }}
                         onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                        <td className="px-4 py-2 font-medium mono" style={{ color: "var(--text-bright)", fontSize: 11 }}>{c.name}</td>
+                        <td className="px-4 py-2 font-medium mono flex items-center gap-1.5" style={{ color: "var(--text-bright)", fontSize: 11 }}>
+                          {c.is_primary_key && <span title="Primary Key">🔑</span>}
+                          {c.is_foreign_key && <span title="Foreign Key">🔗</span>}
+                          {c.name}
+                        </td>
                         <td className="px-4 py-2 mono" style={{ color: "var(--teal)", fontSize: 10 }}>{c.data_type}</td>
                         <td className="px-4 py-2" style={{ color: "var(--text-muted)", fontSize: 11 }}>{c.is_nullable ? "yes" : "no"}</td>
                         <td className="px-4 py-2">

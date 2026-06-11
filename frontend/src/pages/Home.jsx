@@ -3,7 +3,7 @@ import { useChat } from "../context/ChatContext";
 import useHealth from "../hooks/useHealth";
 
 export default function Home() {
-  const { chats, activeChat, activeChatId, setActiveChatId, createNewChat, sendMessage, renameChat, deleteChat, loading } = useChat();
+  const { chats, activeChat, activeChatId, setActiveChatId, createNewChat, sendMessage, deleteChat, loading } = useChat();
   const health = useHealth();
 
   return (

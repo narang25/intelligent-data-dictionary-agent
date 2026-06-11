@@ -27,6 +27,43 @@ export default function VisualizationPage() {
   const [xColumn, setXColumn] = useState("");
   const [yColumn, setYColumn] = useState("");
 
+  const columns = useMemo(() => chartData?.columns || [], [chartData]);
+  const rows = useMemo(() => chartData?.rows || [], [chartData]);
+
+  // Detect numeric columns
+  const numericColumns = useMemo(() => {
+    if (!columns.length) return [];
+    return columns.filter((_, colIndex) =>
+      rows.every((row) => !isNaN(row[colIndex]))
+    );
+  }, [columns, rows]);
+
+  // Smart auto setup
+  useEffect(() => {
+    if (!columns.length || !rows.length) return;
+
+    const numericIndex = columns.findIndex((_, i) =>
+      rows.every((row) => !isNaN(row[i]))
+    );
+
+    if (numericIndex === -1) return;
+
+    const firstColIndex = 0;
+    const isDateColumn = rows.every((row) => !isNaN(Date.parse(row[firstColIndex])));
+
+    if (isDateColumn) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setChartType("line");
+    } else if (rows.length <= 8) {
+      setChartType("pie");
+    } else {
+      setChartType("bar");
+    }
+
+    setXColumn(columns[firstColIndex]);
+    setYColumn(columns[numericIndex]);
+  }, [columns, rows]);
+
   if (!chartData) {
     return (
       <div className="p-10 text-primary bg-primary min-h-screen">
@@ -40,42 +77,6 @@ export default function VisualizationPage() {
       </div>
     );
   }
-
-  const { columns, rows } = chartData;
-
-  // Detect numeric columns
-  const numericColumns = useMemo(() => {
-    return columns.filter((_, colIndex) =>
-      rows.every((row) => !isNaN(row[colIndex]))
-    );
-  }, [columns, rows]);
-
-  const isDateColumn = (colIndex) =>
-    rows.every((row) => !isNaN(Date.parse(row[colIndex])));
-
-  // Smart auto setup
-  useEffect(() => {
-    if (!columns.length || !rows.length) return;
-
-    const numericIndex = columns.findIndex((_, i) =>
-      rows.every((row) => !isNaN(row[i]))
-    );
-
-    if (numericIndex === -1) return;
-
-    const firstColIndex = 0;
-
-    if (isDateColumn(firstColIndex)) {
-      setChartType("line");
-    } else if (rows.length <= 8) {
-      setChartType("pie");
-    } else {
-      setChartType("bar");
-    }
-
-    setXColumn(columns[firstColIndex]);
-    setYColumn(columns[numericIndex]);
-  }, [columns, rows]);
 
   if (!numericColumns.length) {
     return (

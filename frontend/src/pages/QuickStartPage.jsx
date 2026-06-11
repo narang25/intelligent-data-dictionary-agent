@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useConnection } from "../context/ConnectionContext";
-import { getOverview, analyzeDatabase, sendMessageToAPI, getQualityScores, listAlerts, triggerBatchDocs, createExport, listTables, previewExport } from "../services/api";
+import { getOverview, analyzeDatabase, sendMessageToAPI, getQualityScores, listAlerts, createExport, listTables, previewExport } from "../services/api";
 import { useNavigate } from "react-router-dom";
+import { SkeletonGrid, SkeletonCard, SkeletonLine } from "../components/UI/Skeleton";
 
 export default function QuickStartPage() {
   const { activeConnection } = useConnection();
@@ -13,16 +14,15 @@ export default function QuickStartPage() {
   const [healthScore, setHealthScore] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [topTables, setTopTables] = useState([]);
+  const [schemaDist, setSchemaDist] = useState([]);
   const [generatingDocs, setGeneratingDocs] = useState(false);
   const [exporting, setExporting] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (activeConnection?.id) fetchData();
-  }, [activeConnection?.id]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
+    setAnalysis(null);
+    setAnswers({});
     try {
       const [overviewData, qualityData, alertsData, tablesData] = await Promise.all([
         getOverview(activeConnection.id).catch(() => null),
@@ -34,11 +34,32 @@ export default function QuickStartPage() {
       setHealthScore(qualityData?.overall_score ?? null);
       setAlerts(alertsData.slice(0, 3));
       
-      const sortedTables = (tablesData.tables || []).sort((a, b) => (b.row_count || 0) - (a.row_count || 0));
-      setTopTables(sortedTables.slice(0, 3).map(t => t.name));
+      const allTables = tablesData.tables || [];
+      const sortedTables = [...allTables].sort((a, b) => (b.row_count || 0) - (a.row_count || 0));
+      setTopTables(sortedTables.slice(0, 5));
+
+      // Schema distribution
+      const schemaMap = {};
+      allTables.forEach(t => {
+        const s = t.schema_name || "public";
+        schemaMap[s] = (schemaMap[s] || 0) + 1;
+      });
+      const dist = Object.entries(schemaMap).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count);
+      setSchemaDist(dist);
+
+      // Auto-run AI analysis for the selected connection (uses backend cache)
+      setLoadingAnalysis(true);
+      try {
+        setAnalysis(await analyzeDatabase(activeConnection.id, false, false));
+      } catch (e) { console.error(e); }
+      finally { setLoadingAnalysis(false); }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
-  };
+  }, [activeConnection?.id]);
+
+  useEffect(() => {
+    if (activeConnection?.id) fetchData();
+  }, [fetchData, activeConnection?.id]);
 
   const runQuickAnalysis = async () => {
     setLoadingAnalysis(true);
@@ -137,6 +158,24 @@ export default function QuickStartPage() {
     );
   }
 
+  // ───── Loading State (Skeleton) ─────
+  if (loading && !overview) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2"><SkeletonLine width="200px" /><SkeletonLine width="120px" /></div>
+          <div className="flex gap-2"><SkeletonCard style={{ width: 120, height: 36 }} /><SkeletonCard style={{ width: 160, height: 36 }} /></div>
+        </div>
+        <SkeletonGrid count={4} />
+        <div className="grid grid-cols-2 gap-4">
+          <SkeletonCard style={{ height: 180 }} />
+          <SkeletonCard style={{ height: 180 }} />
+        </div>
+        <SkeletonCard style={{ height: 250 }} />
+      </div>
+    );
+  }
+
   // ───── Connected State ─────
   return (
     <div className="space-y-6">
@@ -171,35 +210,86 @@ export default function QuickStartPage() {
       {/* Metrics Row */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: "Tables", value: overview?.total_tables || 0, color: "var(--accent)" },
-          { label: "Columns", value: overview?.total_columns || 0, color: "var(--teal)" },
-          { label: "Rows", value: overview?.total_rows || 0, color: "var(--ice)" },
-          { label: "Relationships", value: overview?.total_relationships || 0, color: "var(--coral)" },
+          { label: "Tables", value: overview?.total_tables || 0, color: "var(--accent)", icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg> },
+          { label: "Columns", value: overview?.total_columns || 0, color: "var(--teal)", icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M12 3v18M8 3v18M16 3v18"/></svg> },
+          { label: "Rows", value: overview?.total_rows || 0, color: "var(--ice)", icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 8h18M3 12h18M3 16h18"/></svg> },
+          { label: "Relationships", value: overview?.total_relationships || 0, color: "var(--coral)", icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg> },
         ].map((m, i) => (
-          <div key={m.label} className={`card p-4 rise rise-${i}`}>
+          <div key={m.label} className={`card p-4 rise rise-${i}`} style={{ background: `linear-gradient(135deg, var(--bg-raised) 60%, color-mix(in srgb, ${m.color} 8%, transparent))` }}>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{m.label}</span>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `color-mix(in srgb, ${m.color} 12%, transparent)`, color: m.color }}>
+                  {m.icon}
+                </div>
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{m.label}</span>
+              </div>
               <span className="text-xl font-bold mono" style={{ color: m.color }}>{typeof m.value === "number" ? m.value.toLocaleString() : m.value}</span>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Critical Alerts */}
-      {alerts.length > 0 && (
-        <div className="card p-4 rise" style={{ background: "var(--coral-dim)", border: "1px solid rgba(232,105,90,0.2)" }}>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg">🚨</span>
-            <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: "var(--coral)" }}>Critical Alerts</h3>
+      {/* Schema Distribution + Alerts Row */}
+      <div className="grid grid-cols-2 gap-4">
+        {/* Schema Distribution Chart */}
+        {schemaDist.length > 0 && (
+          <div className="card p-5 rise">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg">📊</span>
+              <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: "var(--text-bright)" }}>Schema Distribution</h3>
+            </div>
+            <div className="space-y-3">
+              {schemaDist.map((s, i) => {
+                const maxCount = schemaDist[0].count;
+                const pct = Math.round((s.count / maxCount) * 100);
+                const colors = ["var(--accent)", "var(--teal)", "var(--ice)", "var(--coral)"];
+                const color = colors[i % colors.length];
+                return (
+                  <div key={s.name}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs mono font-semibold" style={{ color: "var(--text-bright)" }}>{s.name}</span>
+                      <span className="text-xs mono" style={{ color }}>{s.count} tables</span>
+                    </div>
+                    <div className="stat-bar" style={{ height: 6 }}>
+                      <div className="stat-bar-fill" style={{ width: `${pct}%`, background: color, transition: "width 0.6s ease" }}></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {alerts.map(a => (
-              <div key={a.id} className="flex flex-col p-3 rounded-lg" style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(232,105,90,0.1)" }}>
-                <span className="text-xs font-bold truncate" style={{ color: "var(--text-bright)" }}>{a.table_name}.{a.column_name}</span>
-                <span className="text-xs mt-1 overflow-hidden" style={{ color: "var(--coral)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{a.message}</span>
-              </div>
-            ))}
+        )}
+
+        {/* Critical Alerts */}
+        {alerts.length > 0 ? (
+          <div className="card p-5 rise" style={{ background: "var(--coral-dim)", border: "1px solid rgba(232,105,90,0.2)" }}>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg">🚨</span>
+              <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: "var(--coral)" }}>Critical Alerts</h3>
+            </div>
+            <div className="space-y-3">
+              {alerts.map(a => (
+                <div key={a.id} className="flex flex-col p-3 rounded-lg" style={{ background: "rgba(0,0,0,0.2)", border: "1px solid rgba(232,105,90,0.1)" }}>
+                  <span className="text-xs font-bold truncate" style={{ color: "var(--text-bright)" }}>{a.table_name}.{a.column_name}</span>
+                  <span className="text-xs mt-1 overflow-hidden" style={{ color: "var(--coral)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{a.message}</span>
+                </div>
+              ))}
+            </div>
           </div>
+        ) : schemaDist.length === 0 ? null : (
+          <div className="card p-5 rise flex flex-col items-center justify-center" style={{ border: "1px solid var(--border)" }}>
+            <span className="text-2xl mb-2">✅</span>
+            <p className="text-sm font-semibold" style={{ color: "var(--teal)" }}>No Active Alerts</p>
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>Your database is looking healthy!</p>
+          </div>
+        )}
+      </div>
+
+      {/* Loading indicator for auto-analysis */}
+      {loadingAnalysis && !analysis && (
+        <div className="card p-8 flex items-center justify-center gap-3 rise">
+          <div className="spinner"></div>
+          <span className="text-sm" style={{ color: "var(--text-muted)" }}>Generating AI insights automatically...</span>
         </div>
       )}
 
@@ -284,48 +374,39 @@ export default function QuickStartPage() {
               </ul>
             </div>
 
-            {/* Key Tables */}
+            {/* Top Tables Leaderboard */}
             <div className="card p-5 flex flex-col">
               <div className="flex items-center gap-2 mb-4">
-                <span className="text-xl">🕸️</span>
-                <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: "var(--text-bright)" }}>Core Entity Graph</h3>
+                <span className="text-xl">🏆</span>
+                <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: "var(--text-bright)" }}>Top Tables by Data Volume</h3>
               </div>
               
               {topTables.length > 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center relative min-h-[200px] mt-4">
-                  <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 0 }}>
-                    {topTables.length >= 2 && (
-                      <path d="M 50% 20% L 20% 80%" stroke="var(--border-active)" strokeWidth="1.5" strokeDasharray="4 4" fill="none" />
-                    )}
-                    {topTables.length >= 3 && (
-                      <>
-                        <path d="M 50% 20% L 80% 80%" stroke="var(--border-active)" strokeWidth="1.5" strokeDasharray="4 4" fill="none" />
-                        <path d="M 20% 80% L 80% 80%" stroke="var(--border-active)" strokeWidth="1.5" strokeDasharray="4 4" fill="none" />
-                      </>
-                    )}
-                  </svg>
-                  
+                <div className="space-y-3">
                   {topTables.map((t, i) => {
-                    // Calculate exact positions for the 3 nodes
-                    const posStyle = i === 0 
-                      ? { top: "10%", left: "50%", transform: "translateX(-50%)" } 
-                      : i === 1 
-                        ? { bottom: "10%", left: "10%" } 
-                        : { bottom: "10%", right: "10%" };
-                    
-                    const color = i === 0 ? "var(--accent)" : i === 1 ? "var(--teal)" : "var(--ice)";
-                    
+                    const maxRows = topTables[0].row_count || 1;
+                    const pct = Math.round(((t.row_count || 0) / maxRows) * 100);
+                    const colors = ["var(--accent)", "var(--teal)", "var(--ice)", "var(--coral)", "#a78bfa"];
+                    const color = colors[i];
+                    const medals = ["🥇", "🥈", "🥉", "4.", "5."];
                     return (
-                      <div key={i} className="absolute px-3 py-1.5 rounded-lg border text-xs mono font-bold shadow-lg truncate max-w-[120px] text-center"
-                           style={{ ...posStyle, background: "var(--bg-surface)", borderColor: color, color, zIndex: 10 }}
-                           title={t}>
-                        {t}
+                      <div key={t.name}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{medals[i]}</span>
+                            <span className="text-xs mono font-semibold truncate" style={{ color: "var(--text-bright)", maxWidth: 180 }} title={t.name}>{t.name}</span>
+                          </div>
+                          <span className="text-[11px] mono" style={{ color }}>{(t.row_count || 0).toLocaleString()} rows</span>
+                        </div>
+                        <div className="stat-bar" style={{ height: 5 }}>
+                          <div className="stat-bar-fill" style={{ width: `${pct}%`, background: color, transition: "width 0.6s ease" }}></div>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>No core entities identified.</p>
+                <p className="text-xs" style={{ color: "var(--text-muted)" }}>No tables found.</p>
               )}
             </div>
           </div>
@@ -334,11 +415,11 @@ export default function QuickStartPage() {
           <div className="flex justify-center mt-8">
             <button 
               onClick={() => navigate("/dashboard")} 
-              className="px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all hover:scale-105"
-              style={{ background: "var(--accent)", color: "#0d0d0f", boxShadow: "0 0 20px var(--accent-glow)" }}
+              className="btn-cta-pulse px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all hover:scale-105"
+              style={{ background: "linear-gradient(135deg, var(--accent), var(--accent-dim))", color: "#0d0d0f", boxShadow: "0 0 24px var(--accent-glow)" }}
             >
               ✨ Enter Full Dashboard
-              <span className="text-xs font-normal opacity-80">(Consumes High Tokens)</span>
+              <span className="text-xs font-normal opacity-80">(Deep Analysis)</span>
             </button>
           </div>
         </div>

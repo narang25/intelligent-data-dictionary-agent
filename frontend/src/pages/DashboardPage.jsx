@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useConnection } from "../context/ConnectionContext";
-import { getOverview, analyzeDatabase, listTables, triggerBatchDocs, getBatchDocsStatus } from "../services/api";
+import { getOverview, analyzeDatabase, listTables, triggerBatchDocs, getBatchDocsStatus, getRelationshipGraph } from "../services/api";
 
 export default function DashboardPage() {
   const { activeConnection } = useConnection();
@@ -8,28 +8,34 @@ export default function DashboardPage() {
   const [analysis, setAnalysis] = useState(null);
   const [tables, setTables] = useState([]);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [graphData, setGraphData] = useState(null);
 
   // Batch Docs State
   const [docsStatus, setDocsStatus] = useState(null);
   const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
 
-  useEffect(() => {
-    if (activeConnection?.id) fetchData();
-  }, [activeConnection?.id]);
+  // Graph interaction state
+  const [hoveredNode, setHoveredNode] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
 
-  const fetchData = async () => {
-    setLoading(true);
+
+  const fetchData = useCallback(async () => {
+    setAnalysis(null);
     try {
-      const [ov, tb] = await Promise.all([
+      const [ov, tb, graph] = await Promise.all([
         getOverview(activeConnection.id),
         listTables(activeConnection.id).catch(() => ({ tables: [] })),
+        getRelationshipGraph(activeConnection.id).catch(() => ({ nodes: [], edges: [] })),
       ]);
       setOverview(ov);
       setTables(tb.tables || []);
+      setGraphData(graph);
     } catch (err) { console.error(err); }
-    finally { setLoading(false); }
-  };
+  }, [activeConnection?.id]);
+
+  useEffect(() => {
+    if (activeConnection?.id) fetchData();
+  }, [fetchData, activeConnection?.id]);
 
   const runAnalysis = async () => {
     setLoadingAnalysis(true);
@@ -154,12 +160,22 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Metric Cards — horizontal bars instead of big numbers */}
+      {/* Metric Cards */}
       <div className="grid grid-cols-4 gap-3">
-        {metrics.map((m, i) => (
-          <div key={m.label} className={`card p-4 rise rise-${i}`}>
+        {[
+          { ...metrics[0], icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg> },
+          { ...metrics[1], icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M12 3v18M8 3v18M16 3v18"/></svg> },
+          { ...metrics[2], icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M3 8h18M3 12h18M3 16h18"/></svg> },
+          { ...metrics[3], icon: <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg> },
+        ].map((m, i) => (
+          <div key={m.label} className={`card p-4 rise rise-${i}`} style={{ background: `linear-gradient(135deg, var(--bg-raised) 60%, color-mix(in srgb, ${m.color} 8%, transparent))` }}>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{m.label}</span>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `color-mix(in srgb, ${m.color} 12%, transparent)`, color: m.color }}>
+                  {m.icon}
+                </div>
+                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>{m.label}</span>
+              </div>
               <span className="text-xl font-bold mono" style={{ color: m.color }}>{typeof m.value === "number" ? m.value.toLocaleString() : m.value}</span>
             </div>
             <div className="stat-bar">
@@ -168,6 +184,66 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Schema Distribution Donut */}
+      {overview && (() => {
+        const schemas = {};
+        tables.forEach(t => { const s = t.schema_name || 'public'; schemas[s] = (schemas[s] || 0) + 1; });
+        const schemaEntries = Object.entries(schemas).sort((a, b) => b[1] - a[1]);
+        const total = schemaEntries.reduce((s, [, v]) => s + v, 0) || 1;
+        const colors = ["var(--accent)", "var(--teal)", "var(--ice)", "var(--coral)"];
+        let offset = 0;
+        return schemaEntries.length > 0 && (
+          <div className="card p-5 rise">
+            <h3 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>Schema Distribution</h3>
+            <div className="flex items-center gap-8">
+              <div className="relative" style={{ width: 120, height: 120 }}>
+                <svg viewBox="0 0 100 100" width="120" height="120">
+                  {schemaEntries.map(([name, count], i) => {
+                    const pct = count / total;
+                    const dashLen = pct * 251.2;
+                    const dashOffset = -offset * 251.2;
+                    offset += pct;
+                    return (
+                      <circle key={name} cx="50" cy="50" r="40" fill="none"
+                        stroke={colors[i % colors.length]} strokeWidth="10"
+                        strokeDasharray={`${dashLen} ${251.2 - dashLen}`}
+                        strokeDashoffset={dashOffset}
+                        style={{ transform: "rotate(-90deg)", transformOrigin: "center" }}
+                      />
+                    );
+                  })}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-lg font-bold mono" style={{ color: "var(--text-bright)" }}>{total}</span>
+                  <span className="text-[8px] uppercase" style={{ color: "var(--text-muted)" }}>Total</span>
+                </div>
+              </div>
+              <div className="flex-1 space-y-2">
+                {schemaEntries.map(([name, count], i) => (
+                  <div key={name} className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded" style={{ background: colors[i % colors.length] }}></div>
+                    <span className="text-sm mono flex-1" style={{ color: "var(--text-primary)" }}>{name}</span>
+                    <span className="text-sm mono font-bold" style={{ color: colors[i % colors.length] }}>{count}</span>
+                    <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>{Math.round(count / total * 100)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ═══════ Interactive Relationship Graph ═══════ */}
+      {graphData && graphData.edges.length > 0 && (
+        <RelationshipGraph
+          graphData={graphData}
+          hoveredNode={hoveredNode}
+          setHoveredNode={setHoveredNode}
+          selectedNode={selectedNode}
+          setSelectedNode={setSelectedNode}
+        />
+      )}
 
       {/* AI Analysis — Two-column card layout */}
       {analysis && (
@@ -248,6 +324,224 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// ═══════════════════════════════════════════
+// Interactive Relationship Graph Component
+// ═══════════════════════════════════════════
+function RelationshipGraph({ graphData, hoveredNode, setHoveredNode, selectedNode, setSelectedNode }) {
+  const svgRef = useRef(null);
+  const [positions, setPositions] = useState({});
+  const [dragging, setDragging] = useState(null);
+  const [svgSize, setSvgSize] = useState({ width: 900, height: 450 });
+
+  // Compute initial circular layout
+  useEffect(() => {
+    if (!graphData?.nodes?.length) return;
+
+    const container = svgRef.current?.parentElement;
+    const w = container?.clientWidth || 900;
+    const h = 450;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSvgSize({ width: w, height: h });
+
+    // Only set positions of nodes that have edges (connected nodes)
+    const connectedIds = new Set();
+    graphData.edges.forEach(e => {
+      connectedIds.add(e.source);
+      connectedIds.add(e.target);
+    });
+
+    const connectedNodes = graphData.nodes.filter(n => connectedIds.has(n.id));
+    const totalNodes = connectedNodes.length;
+    if (totalNodes === 0) return;
+
+    const cx = w / 2;
+    const cy = h / 2;
+    const radiusX = (w / 2) - 100;
+    const radiusY = (h / 2) - 60;
+
+    const newPos = {};
+    connectedNodes.forEach((node, i) => {
+      const angle = (2 * Math.PI * i) / totalNodes - Math.PI / 2;
+      newPos[node.id] = {
+        x: cx + radiusX * Math.cos(angle),
+        y: cy + radiusY * Math.sin(angle),
+      };
+    });
+    setPositions(newPos);
+  }, [graphData]);
+
+  // Drag handlers
+  const handleMouseDown = useCallback((nodeId, e) => {
+    e.preventDefault();
+    setDragging(nodeId);
+    setSelectedNode(nodeId);
+  }, [setSelectedNode]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!dragging || !svgRef.current) return;
+    const svg = svgRef.current;
+    const rect = svg.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setPositions(prev => ({ ...prev, [dragging]: { x, y } }));
+  }, [dragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setDragging(null);
+  }, []);
+
+  if (!graphData?.edges?.length || Object.keys(positions).length === 0) return null;
+
+  // Determine which edges/nodes to highlight
+  const highlightId = hoveredNode || selectedNode;
+  const connectedToHighlight = new Set();
+  if (highlightId) {
+    graphData.edges.forEach(e => {
+      if (e.source === highlightId) connectedToHighlight.add(e.target);
+      if (e.target === highlightId) connectedToHighlight.add(e.source);
+    });
+  }
+
+  return (
+    <div className="card p-0 overflow-hidden rise">
+      <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🔗</span>
+          <h3 className="text-sm font-bold uppercase tracking-wider" style={{ color: "var(--text-bright)" }}>Schema Relationship Graph</h3>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] mono" style={{ color: "var(--text-muted)" }}>
+            {graphData.edges.length} connections • Drag nodes to rearrange
+          </span>
+          {selectedNode && (
+            <button onClick={() => setSelectedNode(null)} className="text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: "var(--accent-glow)", color: "var(--accent)" }}>
+              Clear Selection
+            </button>
+          )}
+        </div>
+      </div>
+      <div style={{ background: "var(--bg-base)", position: "relative" }}>
+        <svg
+          ref={svgRef}
+          width="100%"
+          height={svgSize.height}
+          viewBox={`0 0 ${svgSize.width} ${svgSize.height}`}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          style={{ cursor: dragging ? "grabbing" : "default" }}
+        >
+          <defs>
+            <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="var(--border-active)" />
+            </marker>
+            <marker id="arrowhead-active" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="var(--accent)" />
+            </marker>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" />
+            </filter>
+          </defs>
+
+          {/* Edges */}
+          {graphData.edges.map((edge, i) => {
+            const from = positions[edge.source];
+            const to = positions[edge.target];
+            if (!from || !to) return null;
+
+            const isActive = highlightId && (edge.source === highlightId || edge.target === highlightId);
+            const isDimmed = highlightId && !isActive;
+
+            // Compute a slight curve for the edge
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            const mx = (from.x + to.x) / 2 + dy * 0.1;
+            const my = (from.y + to.y) / 2 - dx * 0.1;
+
+            return (
+              <g key={i}>
+                <path
+                  d={`M ${from.x} ${from.y} Q ${mx} ${my} ${to.x} ${to.y}`}
+                  fill="none"
+                  stroke={isActive ? "var(--accent)" : "var(--border-active)"}
+                  strokeWidth={isActive ? 2 : 1}
+                  strokeDasharray={isActive ? "none" : "6 3"}
+                  opacity={isDimmed ? 0.15 : isActive ? 1 : 0.5}
+                  markerEnd={isActive ? "url(#arrowhead-active)" : "url(#arrowhead)"}
+                  style={{ transition: "opacity 0.2s, stroke-width 0.2s" }}
+                />
+                {/* Edge label on hover */}
+                {isActive && (
+                  <text x={mx} y={my - 8} textAnchor="middle" fill="var(--accent)" fontSize="9" fontFamily="monospace" fontWeight="bold">
+                    {edge.source_column} → {edge.target_column}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+
+          {/* Nodes */}
+          {graphData.nodes.filter(n => positions[n.id]).map((node) => {
+            const pos = positions[node.id];
+            if (!pos) return null;
+
+            const isHighlighted = node.id === highlightId;
+            const isConnected = connectedToHighlight.has(node.id);
+            const isDimmed = highlightId && !isHighlighted && !isConnected;
+
+            const nodeColor = isHighlighted ? "var(--accent)" : isConnected ? "var(--teal)" : "var(--text-muted)";
+
+            return (
+              <g
+                key={node.id}
+                transform={`translate(${pos.x}, ${pos.y})`}
+                onMouseDown={(e) => handleMouseDown(node.id, e)}
+                onMouseEnter={() => setHoveredNode(node.id)}
+                onMouseLeave={() => setHoveredNode(null)}
+                style={{ cursor: "grab", transition: dragging === node.id ? "none" : "opacity 0.2s", opacity: isDimmed ? 0.2 : 1 }}
+              >
+                {/* Glow ring on highlight */}
+                {isHighlighted && (
+                  <circle r="30" fill="none" stroke="var(--accent)" strokeWidth="1" opacity="0.3" filter="url(#glow)" />
+                )}
+                
+                {/* Node circle */}
+                <circle
+                  r="6"
+                  fill={isHighlighted ? "var(--accent)" : isConnected ? "var(--teal)" : "var(--bg-raised)"}
+                  stroke={nodeColor}
+                  strokeWidth={isHighlighted ? 2.5 : 1.5}
+                />
+
+                {/* Label */}
+                <text
+                  y={-14}
+                  textAnchor="middle"
+                  fill={isHighlighted ? "var(--accent)" : isConnected ? "var(--teal)" : "var(--text-secondary)"}
+                  fontSize={isHighlighted ? "11" : "10"}
+                  fontFamily="monospace"
+                  fontWeight={isHighlighted ? "bold" : "normal"}
+                >
+                  {node.label}
+                </text>
+
+                {/* Row count badge on highlight */}
+                {isHighlighted && (
+                  <text y={18} textAnchor="middle" fill="var(--text-muted)" fontSize="8" fontFamily="monospace">
+                    {node.row_count.toLocaleString()} rows • {node.column_count} cols
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 }

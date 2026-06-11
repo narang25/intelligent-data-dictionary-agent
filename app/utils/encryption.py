@@ -10,8 +10,11 @@ load_dotenv()
 
 _KEY = os.getenv("DB_ENCRYPTION_KEY")
 if not _KEY:
-    _KEY = Fernet.generate_key().decode()
-    print(f"⚠️  No DB_ENCRYPTION_KEY set. Generated ephemeral key (add to .env for persistence): {_KEY}")
+    raise RuntimeError(
+        "🚨 DB_ENCRYPTION_KEY environment variable is not set! "
+        "Generate one with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\" "
+        "and add it to your .env file."
+    )
 
 _fernet = Fernet(_KEY.encode() if isinstance(_KEY, str) else _KEY)
 

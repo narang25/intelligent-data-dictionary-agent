@@ -11,6 +11,7 @@ export default function ChatItem({
   const [title, setTitle] = useState(chat.title);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTitle(chat.title);
   }, [chat.title]);
 

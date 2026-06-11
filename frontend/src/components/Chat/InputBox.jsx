@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function InputBox({ onSend, isDark = true }) {
+export default function InputBox({ onSend }) {
   const [input, setInput] = useState("");
 
   const handleSend = () => {
@@ -10,30 +10,22 @@ export default function InputBox({ onSend, isDark = true }) {
   };
 
   return (
-    <div className={`flex items-center gap-2 rounded-xl px-4 py-2 transition-colors ${
-      isDark 
-        ? "bg-neutral-800 border border-neutral-700" 
-        : "bg-gray-100 border border-gray-300"
-    }`}>
+    <div className="relative">
       <input
         type="text"
-        placeholder="Ask anything..."
-        className={`flex-1 bg-transparent text-sm focus:outline-none ${
-          isDark 
-            ? "text-neutral-200 placeholder-neutral-500" 
-            : "text-gray-800 placeholder-gray-400"
-        }`}
+        placeholder="Ask anything about your database..."
+        className="chat-input"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && handleSend()}
       />
       <button
         onClick={handleSend}
-        className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-blue-500 transition-colors flex items-center gap-2"
+        className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg flex items-center justify-center transition-all"
+        style={{ background: input.trim() ? "var(--accent)" : "var(--bg-hover)", color: input.trim() ? "#0d0d0f" : "var(--text-muted)" }}
       >
-        <span>Send</span>
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
         </svg>
       </button>
     </div>

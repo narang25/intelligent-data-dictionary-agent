@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from app.core.database import SessionLocal
+from app.api.dependencies import get_db
 from app.domain.models import User
 from app.core.security import hash_password, verify_password, create_access_token
 from app.api.schemas import UserSignup, UserLogin, TokenResponse
@@ -9,9 +9,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/signup", response_model=TokenResponse)
-def signup(user: UserSignup):
-
-    db: Session = SessionLocal()
+def signup(user: UserSignup, db: Session = Depends(get_db)):
 
     existing = db.query(User).filter_by(email=user.email).first()
     if existing:
@@ -32,9 +30,7 @@ def signup(user: UserSignup):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(user: UserLogin):
-
-    db: Session = SessionLocal()
+def login(user: UserLogin, db: Session = Depends(get_db)):
 
     existing = db.query(User).filter_by(email=user.email).first()
 

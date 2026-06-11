@@ -87,8 +87,8 @@ Return ONLY valid JSON, no markdown fences."""
     else:
         system_prompt = """You are a senior data architect. Analyze the provided table names and return a JSON object with:
 {
-  "business_purpose": "A concise 1 or 2 sentence summary of what this database is likely used for",
-  "suggested_questions": ["Analytical question 1", "Analytical question 2", "Analytical question 3"],
+  "business_purpose": "A detailed 4-5 sentence paragraph explaining what this database is used for, the key business domains it covers, who would use it, the types of workflows it supports, and how different parts of the schema relate to each other.",
+  "suggested_questions": ["A specific analytical question about the data", "Another insightful question a business user would ask", "A third question about data quality or trends"],
   "key_tables": ["table1_name", "table2_name", "table3_name"]
 }
 Return ONLY valid JSON, no markdown fences."""
