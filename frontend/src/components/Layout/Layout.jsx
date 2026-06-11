@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { listAlerts, dismissAlert } from "../../services/api";
 
 const navItems = [
+  { path: "/quick-start", label: "Quick Start", shortcut: "S",
+    icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> },
   { path: "/dashboard", label: "Dashboard", shortcut: "D",
     icon: <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg> },
   { path: "/tables", label: "Tables", shortcut: "T",

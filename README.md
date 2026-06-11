@@ -1,45 +1,46 @@
-# Intelligent Data Dictionary
+# Intelligent Data Dictionary (Jarvis) 🧠📊
 
-An intelligent, AI-powered Data Dictionary platform designed to connect to multiple disparate data sources, automatically extract schemas, profile data quality, provide automated lineage, and offer a conversational interface to query your metadata.
+An enterprise-grade, AI-powered Data Dictionary platform designed to connect to multiple disparate data sources, automatically extract schemas, profile data quality, infer data lineage, and provide a conversational interface to query your metadata.
 
-## Overview
+## 🌟 The Vision
 
-The platform allows data teams to centralize their database metadata into a single searchable, understandable, and well-documented platform. It supports seamless integration with various SQL and NoSQL engines, providing a unified dashboard for all your data assets.
+Modern data teams struggle with massive, undocumented databases. Our platform bridges the gap between raw data schemas and human understanding. It centralizes metadata into a single searchable, understandable, and well-documented platform, using cutting-edge LLM technology to automatically document tables and generate SQL from natural language.
 
-## Supported Connections
+---
 
-The platform natively supports the following database systems:
-1. **PostgreSQL** 🐘
-2. **MySQL** 🐬
-3. **Snowflake** ❄️
-4. **MongoDB** 🍃
+## 🚀 Core Features
 
-*The connector architecture is plug-and-play, meaning new data sources can easily be added to the registry.*
+- **Automated AI Documentation:** Don't write descriptions manually. Connect a database and let the LLM generate business context, key insights, and descriptions for every table and column.
+- **Dual-Brain Chat Interface:** Ask your database questions in plain English. 
+  - *Quantitative Intent:* The AI generates SQL, runs it against your database, and returns the tabular result.
+  - *Qualitative Intent:* The AI uses RAG (Retrieval-Augmented Generation) with **pgvector** embeddings to answer questions about your schema semantics.
+- **Automated Lineage Tracking:** Instantly visualize how data moves through your system. The platform automatically infers lineage from Foreign Keys and renders a beautiful node-based relationship graph.
+- **Data Quality Profiling:** Continuously monitors your database health. Calculates completeness (NULL checks) and uniqueness scores, automatically alerting you to anomalies.
+- **One-Click Export:** Generate formatted, styled PDF documentation for your entire schema instantly via the Quick Actions dashboard.
+- **Universal Connection Architecture:** Natively supports PostgreSQL, MySQL, Snowflake, and MongoDB with a plug-and-play connector factory. 
 
-## Features
+---
 
-- **Automated Schema Syncing:** Extracts schemas, tables, collections, columns, and relationships (Foreign Keys) directly from the source databases.
-- **Unified UI Dashboard:** A modern, React-based UI to manage your connections, browse tables, and sync metadata.
-- **Data Quality Profiling:** Built-in hooks to score your data quality (completeness, uniqueness).
-- **Data Lineage Tracking:** Track how data moves through your system to easily assess the impact of schema changes.
-- **Secure by Default:** Database credentials (including passwords and connection strings) are encrypted at rest using Python `cryptography` (Fernet).
-- **Dockerized Architecture:** The entire stack (Frontend, API, Worker, Beat, Redis, PostgreSQL metadata DB) runs via Docker Compose for easy deployment.
+## 🏗️ Tech Stack
 
-## Tech Stack
-
-### Backend
+**Backend System**
 - **Framework:** FastAPI (Python 3.11)
-- **ORM:** SQLAlchemy (Async + Sync)
-- **Database:** PostgreSQL (with `pgvector` for future AI embeddings)
-- **Task Queue:** Celery + Redis (for background syncs and profiling)
-- **Encryption:** `cryptography` (Fernet)
+- **Database:** PostgreSQL (with `pgvector` & `pgcrypto`)
+- **AI & ML:** Sentence-Transformers (Local Embeddings), pgvector (Vector DB), Groq/OpenAI (LLM reasoning)
+- **Task Queue:** Celery + Redis (for asynchronous background AI generation)
+- **Security:** AES encryption at rest for database credentials via Python `cryptography` (Fernet)
 
-### Frontend
+**Frontend System**
 - **Framework:** React + Vite
-- **Styling:** Vanilla CSS + Modern Glassmorphism UI
-- **Server:** Nginx (Alpine)
+- **Styling:** Vanilla CSS, Modern Glassmorphism UI, Dark Mode Default
+- **Data Viz:** Custom pure SVG interactive network graphs
 
-## Getting Started
+**Infrastructure**
+- **Deployment:** Fully Dockerized (6 containers) utilizing Nginx
+
+---
+
+## 💻 Getting Started
 
 ### Prerequisites
 - [Docker](https://docs.docker.com/get-docker/)
@@ -47,13 +48,17 @@ The platform natively supports the following database systems:
 
 ### Installation & Execution
 
-1. **Clone the repository**
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/intelligent-data-dictionary.git
+   cd intelligent-data-dictionary
+   ```
 
-2. **Start the platform via Docker Compose**
+2. **Start the platform via Docker Compose:**
    ```bash
    docker-compose up --build -d
    ```
-   *This command builds all images and spins up 6 containers:*
+   *This single command builds all images and spins up the entire microservice architecture:*
    - `jarvis_frontend` (Nginx serving React UI on port 80)
    - `jarvis_api` (FastAPI backend on port 8000)
    - `jarvis_worker` (Celery background task worker)
@@ -61,17 +66,18 @@ The platform natively supports the following database systems:
    - `jarvis_redis` (Message broker)
    - `jarvis_db` (Internal PostgreSQL DB storing platform metadata)
 
-3. **Access the Platform**
+3. **Access the Platform:**
    - **Frontend UI:** [http://localhost](http://localhost)
    - **Backend API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 
-### Connecting to Local Databases
-If you are trying to connect to a database running on your local host machine (e.g., a local MySQL or MongoDB instance running outside of Docker), use `host.docker.internal` as the Host instead of `localhost`.
-
-## Architecture Note for Frontend Developers
-- The Connections API utilizes a centralized `ConnectionService` which encrypts parameters and relies on a `ConnectorFactory` pattern.
-- In the React frontend, connection forms dynamically render fields based on the selected `db_type` (handled in `ConnectionsPage.jsx`).
-- The entire UI relies heavily on context (`ConnectionContext.jsx`) to keep track of the currently active database for viewing tables and lineage.
+*(Note: If connecting to a local database outside of Docker, use `host.docker.internal` as the connection Host instead of `localhost`)*
 
 ---
-*Built for modern data teams.*
+
+## 🔒 Security & Privacy First
+- **Read-Only Safeties:** We enforce strict schema introspection without destructive write access.
+- **PII Skipping:** Intelligent profiling automatically bypasses scanning raw values for columns flagged as containing sensitive PII (Passwords, SSNs, Emails) to ensure compliance.
+- **Credential Encryption:** All external database passwords and tokens are strongly encrypted via symmetric cryptography before being stored in the metadata database.
+
+---
+*Built to make data understandable for everyone.*

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { sendMessageToAPI } from "../services/api";
+import { useConnection } from "../context/ConnectionContext";
 
 const STORAGE_KEY = "jarvis_chats";
 const ACTIVE_CHAT_KEY = "jarvis_active_chat";
@@ -25,6 +26,7 @@ const generateTitle = (text) => {
 };
 
 export default function useChats() {
+  const { activeConnection } = useConnection();
   const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -164,7 +166,8 @@ export default function useChats() {
     try {
       const response = await sendMessageToAPI(
         text,
-        activeChat.sessionId
+        activeChat.sessionId,
+        activeConnection?.id || null
       );
 
       const assistantMessage = {
@@ -232,6 +235,28 @@ export default function useChats() {
     );
   };
 
+  const deleteChat = (chatId) => {
+    setChats((prev) => {
+      const filtered = prev.filter((c) => c.id !== chatId);
+      
+      if (chatId === activeChatId) {
+        if (filtered.length > 0) {
+          setActiveChatId(filtered[0].id);
+        } else {
+          const newChat = {
+            id: Date.now(),
+            title: "New Chat",
+            sessionId: null,
+            messages: [],
+            isRenamed: false,
+          };
+          setActiveChatId(newChat.id);
+          return [newChat];
+        }
+      }
+      return filtered;
+    });
+  };
 
   return {
     chats,
@@ -241,6 +266,7 @@ export default function useChats() {
     createNewChat,
     sendMessage,
     renameChat,
+    deleteChat,
     loading,
   };
 }

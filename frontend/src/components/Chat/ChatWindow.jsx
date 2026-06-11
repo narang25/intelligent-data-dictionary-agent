@@ -43,7 +43,7 @@ export default function ChatWindow({ messages, sendMessage, loading, health }) {
                   style={{ background: "var(--bg-raised)", border: "1px solid var(--border)", color: "var(--text-secondary)" }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--border-active)"; e.currentTarget.style.color = "var(--text-primary)"; }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.color = "var(--text-secondary)"; }}
-                  onClick={() => sendMessage(q.replace(/[💡📊📖🔍] "/, "").replace(/"$/, ""))}>
+                  onClick={() => sendMessage(q.split('"')[1])}>
                   {q}
                 </div>
               ))}

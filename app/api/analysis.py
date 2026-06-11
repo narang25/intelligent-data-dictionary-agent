@@ -38,11 +38,14 @@ def analyze_database(
     """AI analysis of the full database schema: domain, model type, entity groups."""
     conn = _get_connection_or_404(db, connection_id, current_user.id)
 
+    # Determine analysis type for cache
+    analysis_type = "overview_enhanced" if payload.enhanced else "overview_quick"
+
     # Check cache
     if not payload.force_refresh:
         cached = (
             db.query(AIAnalysisCache)
-            .filter_by(connection_id=connection_id, entity_type="database", analysis_type="overview")
+            .filter_by(connection_id=connection_id, entity_type="database", analysis_type=analysis_type)
             .first()
         )
         if cached:
@@ -54,11 +57,15 @@ def analyze_database(
     context_lines = []
     for schema_obj in conn.schemas:
         for table in schema_obj.tables:
-            cols = ", ".join(
-                [f"{c.name} ({c.data_type}{'|PK' if c.is_primary_key else ''}{'|FK' if c.is_foreign_key else ''})"
-                 for c in table.columns]
-            )
-            context_lines.append(f"Table: {schema_obj.name}.{table.name} [{table.row_count or '?'} rows] — Columns: {cols}")
+            if payload.enhanced:
+                cols = ", ".join(
+                    [f"{c.name} ({c.data_type}{'|PK' if c.is_primary_key else ''}{'|FK' if c.is_foreign_key else ''})"
+                     for c in table.columns]
+                )
+                context_lines.append(f"Table: {schema_obj.name}.{table.name} [{table.row_count or '?'} rows] — Columns: {cols}")
+            else:
+                # Minimal context to save tokens
+                context_lines.append(f"Table: {schema_obj.name}.{table.name} [{table.row_count or '?'} rows]")
 
     schema_context = "\n".join(context_lines)
 
@@ -66,13 +73,23 @@ def analyze_database(
         raise HTTPException(status_code=400, detail="No schema data found. Run sync first.")
 
     ai = AIService()
-    system_prompt = """You are a senior enterprise data architect. Analyze the database schema and return a JSON object with:
+    
+    if payload.enhanced:
+        system_prompt = """You are a senior enterprise data architect. Analyze the database schema and return a JSON object with:
 {
   "business_purpose": "string — what business domain this database serves",
   "domain": "string — industry/domain (e.g., retail, finance, healthcare)",
   "model_type": "string — OLTP or OLAP or hybrid",
   "architecture_observations": ["list of architectural observations"],
   "key_entity_groups": ["list of main entity groups/subjects"]
+}
+Return ONLY valid JSON, no markdown fences."""
+    else:
+        system_prompt = """You are a senior data architect. Analyze the provided table names and return a JSON object with:
+{
+  "business_purpose": "A concise 1 or 2 sentence summary of what this database is likely used for",
+  "suggested_questions": ["Analytical question 1", "Analytical question 2", "Analytical question 3"],
+  "key_tables": ["table1_name", "table2_name", "table3_name"]
 }
 Return ONLY valid JSON, no markdown fences."""
 
@@ -85,6 +102,8 @@ Return ONLY valid JSON, no markdown fences."""
     except json.JSONDecodeError:
         result = {
             "business_purpose": response,
+            "suggested_questions": [],
+            "key_tables": [],
             "domain": "unknown",
             "model_type": "unknown",
             "architecture_observations": [],
@@ -96,7 +115,7 @@ Return ONLY valid JSON, no markdown fences."""
         connection_id=connection_id,
         entity_type="database",
         entity_name=conn.name,
-        analysis_type="overview",
+        analysis_type=analysis_type,
         result_json=json.dumps(result),
     )
     db.add(cache_entry)

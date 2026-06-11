@@ -65,81 +65,34 @@ CRITICAL RULES:
    For snowflake: use double-quote identifiers and ILIKE for case-insensitive.
    For mysql: use backtick quoting and LIMIT syntax.
    For postgresql: use standard ANSI SQL with pgcrypto extensions available.
-2. You MUST use SCHEMA-QUALIFIED table names (e.g., olist.orders, olist.customers)
-3. You MUST ONLY use columns from the CORRECT table - check which table has each column!
-4. You MUST NOT invent or assume column names
+2. You MUST use SCHEMA-QUALIFIED table names (e.g., schema_name.table_name)
+3. You MUST ONLY use columns listed in the schema below — check which table has each column!
+4. You MUST NOT invent or assume column names that are not listed below.
+   STRICTLY FORBIDDEN: Do NOT invent columns like 'quantity', 'amount', 'total', etc. if they are not listed.
+5. When a column exists in one table but the question implies another, you MUST use a JOIN
+6. Carefully read the JOIN PATTERNS and IMPORTANT NOTES sections — they tell you exactly how tables connect
+7. Before writing SQL, mentally verify EVERY column you use actually appears in the schema listing for that table
 
-=== EXACT OLIST SCHEMA (USE ONLY THESE COLUMNS) ===
+=== DATABASE SCHEMA (USE ONLY THESE TABLES AND COLUMNS) ===
 
-olist.customers:
-  - customer_id (text), customer_unique_id (text), customer_zip_code_prefix (bigint), 
-    customer_city (text), customer_state (text)
-
-olist.orders:
-  - order_id (text), customer_id (text), order_status (text), 
-    order_purchase_timestamp (text), order_approved_at (text),
-    order_delivered_carrier_date (text), order_delivered_customer_date (text), 
-    order_estimated_delivery_date (text)
-  NOTE: Date columns are in THIS table, not in payments!
-
-olist.order_items:
-  - order_id (text), order_item_id (bigint), product_id (text), seller_id (text), 
-    shipping_limit_date (text), price (double), freight_value (double)
-
-olist.payments:
-  - order_id (text), payment_sequential (bigint), payment_type (text), 
-    payment_installments (bigint), payment_value (double)
-  NOTE: NO date columns here! Must JOIN with orders to get dates!
-
-olist.products:
-  - product_id (text), product_category_name (text), product_name_lenght (double), 
-    product_description_lenght (double), product_photos_qty (double), 
-    product_weight_g (double), product_length_cm (double), 
-    product_height_cm (double), product_width_cm (double)
-
-olist.sellers:
-  - seller_id (text), seller_zip_code_prefix (bigint), seller_city (text), seller_state (text)
-
-olist.reviews:
-  - review_id (text), order_id (text), review_score (int), 
-    review_comment_title (text), review_comment_message (text)
-
-=== CRITICAL JOIN PATTERNS ===
-
-For MONTHLY/YEARLY REVENUE (must JOIN orders and payments):
-  SELECT 
-    EXTRACT(YEAR FROM o.order_purchase_timestamp::timestamp) AS year,
-    EXTRACT(MONTH FROM o.order_purchase_timestamp::timestamp) AS month,
-    SUM(p.payment_value) AS revenue
-  FROM olist.orders o
-  JOIN olist.payments p ON o.order_id = p.order_id
-  GROUP BY year, month
-  ORDER BY year, month
-
-=== IMPORTANT NOTES ===
-- Date columns (order_purchase_timestamp, etc.) are ONLY in olist.orders
-- Payment amounts (payment_value) are ONLY in olist.payments  
-- For time-based revenue analysis: JOIN orders and payments ON order_id
-- DATE COLUMNS ARE TEXT: Cast like order_purchase_timestamp::timestamp
-- State in customers: customer_state | State in sellers: seller_state
-- Category: product_category_name
+{schema_context}
 
 Return ONLY valid SELECT SQL with schema-qualified table names.
 
 IMPORTANT: Return ONLY a valid JSON object:
-{"sql": "SELECT ... FROM olist.table_name ...", "explanation": "..."}
+{{"sql": "SELECT ... FROM schema.table_name ...", "explanation": "..."}}
 """
 
         user_prompt = f"""
-Additional Schema Context:
-{schema_context}
-
 User Question:
 {question}
 
-REMEMBER: 
-- Date columns are in olist.orders, payment_value is in olist.payments
-- For time-based revenue, JOIN orders and payments
+REMEMBER:
+- ONLY use columns that exist in the schema above — do NOT invent columns
+- Use JOINs when you need columns from multiple tables
+- Check the IMPORTANT NOTES section for revenue/monetary column hints and join keys
+- If date columns are stored as text, cast them with ::timestamp
+- Double-check every column name against the schema before using it
 Respond with JSON only:
 """
 
@@ -176,23 +129,25 @@ Respond with JSON only:
     # ------------------------------------------------
     # Basic SQL Safety Validation
     # ------------------------------------------------
-    def validate_sql(self, sql: str):
+    def validate_sql(self, sql: str) -> tuple[bool, str]:
 
         if not sql:
-            return False
+            return False, "Empty SQL"
 
         sql_clean = sql.strip().lower()
 
-        forbidden = ["insert", "update", "delete", "drop", "alter", "truncate"]
+        import re
+        forbidden = [r"\binsert\b", r"\bupdate\b", r"\bdelete\b", r"\bdrop\b", r"\balter\b", r"\btruncate\b", r"\bcreate\b", r"\bgrant\b", r"\brevoke\b", r"\breplace\b"]
 
-        for word in forbidden:
-            if word in sql_clean:
-                return False
+        for pattern in forbidden:
+            if re.search(pattern, sql_clean):
+                clean_pattern = pattern.replace(r'\b', '')
+                return False, f"Destructive SQL command blocked. Found forbidden pattern: {clean_pattern}"
 
-        if not sql_clean.startswith("select"):
-            return False
+        if not (sql_clean.startswith("select") or sql_clean.startswith("with")):
+            return False, "Query must start with SELECT or WITH"
 
-        return True
+        return True, ""
 
     # ------------------------------------------------
     # Dynamic Column Validation (Prevents Hallucination)
@@ -210,10 +165,15 @@ Respond with JSON only:
         sql_lower = sql.lower()
 
         # ----------------------------
-        # Remove EXTRACT(...FROM...) to avoid false positives
-        # EXTRACT(EPOCH FROM column) should not match as a table
+        # Remove all contents inside parentheses to avoid false positives
+        # (e.g., EXTRACT(MONTH FROM column) or nested functions)
         # ----------------------------
-        sql_cleaned = re.sub(r'extract\s*\([^)]*\)', '', sql_lower)
+        sql_cleaned = sql_lower
+        while '(' in sql_cleaned:
+            new_sql = re.sub(r'\([^()]*\)', '', sql_cleaned)
+            if new_sql == sql_cleaned:
+                break
+            sql_cleaned = new_sql
         
         # ----------------------------
         # Extract tables from FROM / JOIN (handles schema.table format)
@@ -295,8 +255,9 @@ Respond with JSON only:
                     return {"error": f"Guardrail blocked query: You do not have permission to access restricted column '{r.column_name}'."}
 
         # Step 1: Basic validation
-        if not self.validate_sql(sql):
-            return {"error": "Unsafe or invalid SQL detected."}
+        is_safe, err_msg = self.validate_sql(sql)
+        if not is_safe:
+            return {"error": f"Unsafe or invalid SQL detected: {err_msg}"}
 
         # Step 2: Enforce LIMIT
         sql = self.enforce_limit(sql)
@@ -350,9 +311,17 @@ Respond with JSON only:
         sql_lower = sql.lower()
 
         # --- 1. Check table/column coverage ---
+        # Strip parentheses content to avoid matching SQL functions (e.g. EXTRACT(MONTH FROM ...))
+        sql_cleaned = sql_lower
+        while '(' in sql_cleaned:
+            new_sql = re.sub(r'\([^()]*\)', '', sql_cleaned)
+            if new_sql == sql_cleaned:
+                break
+            sql_cleaned = new_sql
+
         # Extract table references
         table_pattern = r'(?:from|join)\s+([a-zA-Z_][a-zA-Z0-9_]*\.?[a-zA-Z_][a-zA-Z0-9_]*)'
-        table_matches = re.findall(table_pattern, sql_lower)
+        table_matches = re.findall(table_pattern, sql_cleaned)
 
         # Extract column references (simplified)
         col_pattern = r'(?:select|where|on|group\s+by|order\s+by|having)\s+.*?(?:from|join|where|group|order|having|limit|$)'
@@ -427,52 +396,124 @@ Respond with JSON only:
 # ------------------------------------------------
 # Build Schema Context Helper
 # ------------------------------------------------
-def build_schema_context(self, session, connection_id=None):
+def build_schema_context(session, connection_id=None):
+    """
+    Dynamically build a rich schema context for the LLM prompt.
+    Produces output equivalent to the old hardcoded Olist schema:
+      - Compact table + column listings with data types
+      - Auto-detected date-as-text warnings
+      - JOIN patterns derived from foreign key relationships
+      - Important notes about column locations
+    """
 
     from app.domain.models import Table, Relationship, Documentation, Annotation, Schema
 
-    context = ""
-
+    # ----- 1. Collect tables (filtered by connection if provided) -----
     table_query = session.query(Table)
     if connection_id:
         table_query = table_query.join(Schema).filter(Schema.connection_id == connection_id)
 
     tables = table_query.all()
 
+    # Filter out internal/system schemas — only include user data schemas
+    SKIP_SCHEMAS = {"public", "pg_catalog", "information_schema"}
+    tables = [t for t in tables if (t.schema.name if t.schema else "public") not in SKIP_SCHEMAS]
+
+    if not tables:
+        return "No tables found for this connection.\n"
+
+    # Build a lookup: table_id -> schema_name.table_name
+    table_ids = set()
+    table_full_names = {}  # table_id -> "schema.table"
+    date_text_columns = []  # columns that look like dates but are stored as text
+    column_locations = {}   # column_name -> list of "schema.table" where it exists
+
+    context = ""
+
     for table in tables:
+        schema_name = table.schema.name if table.schema else "public"
+        full_name = f"{schema_name}.{table.name}"
+        table_ids.add(table.id)
+        table_full_names[table.id] = full_name
 
-        context += f"\nTable: {table.schema.name}.{table.name}\n"
-        context += "Columns:\n"
+        context += f"\n{full_name}:\n"
 
+        col_parts = []
         for column in table.columns:
+            # Build compact column entry
+            col_entry = f"{column.name} ({column.data_type})"
 
+            # Attach documentation if available
             doc = (
                 session.query(Documentation)
                 .filter_by(entity_type="column", entity_id=column.id)
                 .first()
             )
-
-            description = ""
             if doc and doc.description:
-                description = f" -> {doc.description}"
+                col_entry += f" -> {doc.description}"
 
-            annotations = session.query(Annotation).filter_by(table_name=table.name, column_name=column.name).all()
+            # Attach team annotations if available
+            annotations = session.query(Annotation).filter_by(
+                table_name=table.name, column_name=column.name
+            ).all()
             if annotations:
                 notes = " | ".join([a.content for a in annotations])
-                description += f" [Team Notes: {notes}]"
+                col_entry += f" [Team Notes: {notes}]"
 
-            context += f"- {column.name} ({column.data_type}){description}\n"
+            col_parts.append(f"  - {col_entry}")
 
-        context += "\n"
+            # Track date columns stored as text (for auto-casting hints)
+            date_keywords = ["date", "timestamp", "time", "_at"]
+            col_name_lower = column.name.lower()
+            col_type_lower = (column.data_type or "").lower()
+            if any(kw in col_name_lower for kw in date_keywords) and col_type_lower in ("text", "character varying", "varchar"):
+                date_text_columns.append(f"{full_name}.{column.name}")
 
-    context += "\nRelationships:\n"
+            # Track which tables have which columns
+            column_locations.setdefault(column.name.lower(), []).append(full_name)
 
-    relationships = session.query(Relationship).all()
+        context += "\n".join(col_parts) + "\n"
 
-    for rel in relationships:
-        context += (
-            f"{rel.source_table}.{rel.source_column} "
-            f"→ {rel.target_table}.{rel.target_column}\n"
-        )
+    # ----- 2. JOIN patterns from foreign key relationships -----
+    # Only include relationships where at least one side belongs to our tables
+    rel_query = session.query(Relationship)
+    if table_ids:
+        rel_query = rel_query.filter(Relationship.table_id.in_(table_ids))
+
+    relationships = rel_query.all()
+
+    if relationships:
+        context += "\n=== JOIN PATTERNS (use these to connect tables) ===\n"
+        seen_joins = set()
+        for rel in relationships:
+            join_key = (rel.source_table, rel.source_column, rel.target_table, rel.target_column)
+            if join_key not in seen_joins:
+                seen_joins.add(join_key)
+                context += f"{rel.source_table}.{rel.source_column} → {rel.target_table}.{rel.target_column}\n"
+
+    # ----- 3. Auto-generated important notes -----
+    context += "\n=== IMPORTANT NOTES ===\n"
+
+    if date_text_columns:
+        col_names = ", ".join(date_text_columns)
+        context += f"- DATE COLUMNS STORED AS TEXT (cast with ::timestamp): {col_names}\n"
+
+    # Auto-detect monetary/value columns for revenue hints
+    money_keywords = ["value", "price", "amount", "cost", "revenue", "salary", "payment", "fee", "freight"]
+    monetary_columns = []
+    for table in tables:
+        schema_name = table.schema.name if table.schema else "public"
+        for column in table.columns:
+            col_type = (column.data_type or "").lower()
+            if col_type in ("double precision", "numeric", "decimal", "real", "float", "money") and \
+               any(kw in column.name.lower() for kw in money_keywords):
+                monetary_columns.append(f"{schema_name}.{table.name}.{column.name}")
+    if monetary_columns:
+        context += f"- MONETARY/VALUE COLUMNS (use for revenue, sales, totals): {', '.join(monetary_columns)}\n"
+
+    # Find columns that appear in multiple tables (helps the AI know where to find things)
+    shared_columns = {col: tables_list for col, tables_list in column_locations.items() if len(tables_list) > 1}
+    for col, tables_list in shared_columns.items():
+        context += f"- Column '{col}' exists in: {', '.join(tables_list)} — use JOIN to connect them\n"
 
     return context

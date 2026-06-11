@@ -18,6 +18,9 @@ def chat_endpoint(
     current_user: User = Depends(get_current_user)
 ):
     try:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"CHAT DEBUG: connection_id={request.connection_id}, question={request.question[:50]}")
         ai_service = AIService()
         chat_service = ChatService(engine, db, ai_service)
 

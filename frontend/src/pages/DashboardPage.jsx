@@ -33,7 +33,9 @@ export default function DashboardPage() {
 
   const runAnalysis = async () => {
     setLoadingAnalysis(true);
-    try { setAnalysis(await analyzeDatabase(activeConnection.id)); }
+    try { 
+      setAnalysis(await analyzeDatabase(activeConnection.id, false, true)); 
+    }
     catch (err) { console.error(err); }
     finally { setLoadingAnalysis(false); }
   };
@@ -126,7 +128,7 @@ export default function DashboardPage() {
               {isGeneratingDocs ? <><div className="spinner"></div> Starting...</> : <><svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> Generate Docs</>}
             </button>
           )}
-          <button onClick={runAnalysis} disabled={loadingAnalysis} className="btn-accent">
+          <button onClick={() => runAnalysis()} disabled={loadingAnalysis} className="btn-accent">
             {loadingAnalysis ? <><div className="spinner"></div> Analyzing...</> : <><svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> Run AI Analysis</>}
           </button>
         </div>

@@ -117,6 +117,7 @@ class PostgreSQLConnector(BaseConnector):
         self._enforce_read_only(sql)
         try:
             with self._get_cursor() as cur:
+                cur.execute("SET TRANSACTION READ ONLY;")
                 cur.execute(sql)
                 # Some queries like SET statement might not return rows
                 if cur.description:

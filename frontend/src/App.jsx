@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import Layout from "./components/Layout/Layout";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
+import QuickStartPage from "./pages/QuickStartPage";
 import DashboardPage from "./pages/DashboardPage";
 import TablesPage from "./pages/TablesPage";
 import QualityPage from "./pages/QualityPage";
@@ -28,11 +29,12 @@ export default function App() {
   return (
     <Routes>
       {/* Auth */}
-      <Route path="/" element={<Navigate to="/dashboard" />} />
+      <Route path="/" element={<Navigate to="/quick-start" />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
 
       {/* App routes inside Layout */}
+      <Route path="/quick-start" element={<AppLayout><QuickStartPage /></AppLayout>} />
       <Route path="/dashboard" element={<AppLayout><DashboardPage /></AppLayout>} />
       <Route path="/tables" element={<AppLayout><TablesPage /></AppLayout>} />
       <Route path="/quality" element={<AppLayout><QualityPage /></AppLayout>} />

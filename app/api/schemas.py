@@ -198,10 +198,13 @@ class QualityResponse(BaseModel):
 # =========================
 class AIAnalysisRequest(BaseModel):
     force_refresh: bool = False
+    enhanced: bool = False
 
 
 class DatabaseAnalysisResponse(BaseModel):
     business_purpose: Optional[str] = None
+    suggested_questions: Optional[List[str]] = None
+    key_tables: Optional[List[str]] = None
     domain: Optional[str] = None
     model_type: Optional[str] = None
     architecture_observations: Optional[List[str]] = None

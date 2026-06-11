@@ -1,0 +1,181 @@
+jarvis_api  | /app/app/api/tables.py:125: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+jarvis_api  |   sort_order: str = Query("asc", regex="^(asc|desc)$"),
+jarvis_api  | INFO:     Started server process [1]
+jarvis_api  | INFO:     Waiting for application startup.
+jarvis_api  | INFO:     Application startup complete.
+jarvis_api  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+jarvis_api  | ✅ pgvector extension enabled
+jarvis_api  | INFO:     172.18.0.7:49262 - "GET /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49270 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49276 - "GET /v1/connections/6/overview HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49278 - "GET /v1/connections/6/tables?search=&page=1&per_page=50 HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49294 - "POST /auth/login HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49312 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49310 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+jarvis_api  | INFO:     172.18.0.7:54548 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3386.56it/s]
+jarvis_api  | INFO:     172.18.0.7:50358 - "POST /chat HTTP/1.1" 500 Internal Server Error
+jarvis_api  | INFO:     172.18.0.7:46540 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:46538 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:56822 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     Shutting down
+jarvis_api  | INFO:     Waiting for application shutdown.
+jarvis_api  | INFO:     Application shutdown complete.
+jarvis_api  | INFO:     Finished server process [1]
+jarvis_api  | /app/app/api/tables.py:125: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+jarvis_api  |   sort_order: str = Query("asc", regex="^(asc|desc)$"),
+jarvis_api  | INFO:     Started server process [1]
+jarvis_api  | INFO:     Waiting for application startup.
+jarvis_api  | INFO:     Application startup complete.
+jarvis_api  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+jarvis_api  | ✅ pgvector extension enabled
+jarvis_api  | INFO:     172.64.149.20:59913 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:52654 - "HEAD /health HTTP/1.1" 405 Method Not Allowed
+jarvis_api  | INFO:     172.18.0.7:50330 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:58218 - "POST /auth/login HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:58226 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:58230 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+jarvis_api  | Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 5599.44it/s]
+jarvis_api  | INFO:     172.18.0.7:33180 - "POST /chat HTTP/1.1" 500 Internal Server Error
+jarvis_api  | INFO:     172.18.0.7:37068 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49428 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49440 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:37416 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41102 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41108 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:51938 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:51936 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:51942 - "GET /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:51946 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:51948 - "GET /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:51944 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:40460 - "POST /chat HTTP/1.1" 500 Internal Server Error
+jarvis_api  | INFO:     172.18.0.7:40464 - "POST /auth/login HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:40466 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:40468 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35548 - "GET /v1/connections/6/overview HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35550 - "GET /v1/connections/6/tables?search=&page=1&per_page=50 HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35574 - "POST /v1/connections/6/ai/analyze HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35584 - "GET /v1/connections/6/tables?search=&page=1&per_page=50 HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35588 - "GET /v1/connections/6/tables/annotations HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35594 - "GET /v1/connections/6/tables/chat_messages HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35598 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41024 - "GET /v1/lineage HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41026 - "GET /v1/connections/6/quality HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41034 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41036 - "POST /chat HTTP/1.1" 500 Internal Server Error
+jarvis_api  | INFO:     172.18.0.7:56606 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:40140 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:40154 - "POST /chat HTTP/1.1" 500 Internal Server Error
+jarvis_api  | INFO:     172.18.0.7:56834 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:40540 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:40554 - "POST /auth/login HTTP/1.1" 401 Unauthorized
+jarvis_api  | INFO:     172.18.0.7:56338 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:56354 - "POST /auth/signup HTTP/1.1" 400 Bad Request
+jarvis_api  | INFO:     172.18.0.7:56366 - "POST /auth/signup HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:43088 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:42006 - "POST /auth/login HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:42026 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:42022 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:42036 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:42038 - "GET /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:59318 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:58234 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:58236 - "POST /v1/connections/test HTTP/1.1" 400 Bad Request
+jarvis_api  | INFO:     172.18.0.7:60066 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:60072 - "POST /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:60088 - "GET /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:44740 - "POST /v1/connections/7/sync HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:44750 - "GET /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:44760 - "POST /v1/connections/test HTTP/1.1" 400 Bad Request
+jarvis_api  | INFO:     172.18.0.7:49096 - "GET /v1/lineage HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49102 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49118 - "GET /v1/connections/7/quality HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49124 - "GET /v1/connections/7/tables?search=&page=1&per_page=50 HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49140 - "GET /v1/connections/7/overview HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:49156 - "GET /v1/connections/7/tables?search=&page=1&per_page=50 HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:55128 - "POST /v1/connections/7/ai/analyze HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:55130 - "GET /v1/connections/7/tables?search=&page=1&per_page=50 HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:55134 - "GET /v1/connections/7/tables/alembic_version HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:55136 - "GET /v1/connections/7/tables/ai_analysis_cache HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:55142 - "GET /v1/connections/7/tables/anomaly_alerts HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:55148 - "GET /v1/connections/7/tables/column_lineage HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:55162 - "GET /v1/connections/7/tables/column_permissions HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:55168 - "GET /v1/connections/7/tables/column_profiles HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:55176 - "GET /v1/connections/7/tables/customers HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:54142 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:54158 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:54164 - "POST /chat HTTP/1.1" 500 Internal Server Error
+jarvis_api  | INFO:     172.18.0.7:37130 - "POST /chat HTTP/1.1" 500 Internal Server Error
+jarvis_api  | INFO:     172.18.0.7:52364 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.64.149.20:26759 - "POST /chat HTTP/1.1" 401 Unauthorized
+jarvis_api  | INFO:     172.18.0.7:41738 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:51492 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:51508 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:44980 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35502 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:39230 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:39234 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:46968 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:34174 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     Shutting down
+jarvis_api  | INFO:     Waiting for application shutdown.
+jarvis_api  | INFO:     Application shutdown complete.
+jarvis_api  | INFO:     Finished server process [1]
+jarvis_api  | /app/app/api/tables.py:125: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+jarvis_api  |   sort_order: str = Query("asc", regex="^(asc|desc)$"),
+jarvis_api  | INFO:     Started server process [1]
+jarvis_api  | INFO:     Waiting for application startup.
+jarvis_api  | INFO:     Application startup complete.
+jarvis_api  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+jarvis_api  | ✅ pgvector extension enabled
+jarvis_api  | INFO:     172.18.0.7:49050 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41326 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41334 - "GET /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41328 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:41348 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:36380 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:36402 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:36404 - "GET /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:36394 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+jarvis_api  | Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3737.24it/s]
+jarvis_api  | INFO:     172.18.0.7:36418 - "POST /chat HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:40730 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35674 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:50846 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:50856 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35590 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35606 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:53546 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:54204 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:42948 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:42958 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     Shutting down
+jarvis_api  | INFO:     Waiting for application shutdown.
+jarvis_api  | INFO:     Application shutdown complete.
+jarvis_api  | INFO:     Finished server process [1]
+jarvis_api  | /app/app/api/tables.py:125: FastAPIDeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+jarvis_api  |   sort_order: str = Query("asc", regex="^(asc|desc)$"),
+jarvis_api  | INFO:     Started server process [1]
+jarvis_api  | INFO:     Waiting for application startup.
+jarvis_api  | INFO:     Application startup complete.
+jarvis_api  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+jarvis_api  | ✅ pgvector extension enabled
+jarvis_api  | INFO:     172.18.0.7:57608 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:57616 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:57620 - "GET /v1/connections HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:51302 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+jarvis_api  | Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|██████████| 103/103 [00:00<00:00, 3612.15it/s]
+jarvis_api  | INFO:     172.18.0.7:51298 - "POST /chat HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:56812 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:56818 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:43362 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:34244 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:34252 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:50998 - "GET /v1/alerts?active_only=true HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35924 - "GET /health HTTP/1.1" 200 OK
+jarvis_api  | INFO:     172.18.0.7:35932 - "GET /health HTTP/1.1" 200 OK

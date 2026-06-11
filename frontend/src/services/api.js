@@ -112,10 +112,10 @@ export async function getSampleData(connectionId, tableName, limit = 20, offset 
 // =========================
 // AI Analysis
 // =========================
-export async function analyzeDatabase(connectionId, forceRefresh = false) {
+export async function analyzeDatabase(connectionId, forceRefresh = false, enhanced = false) {
   return request(`${V1}/connections/${connectionId}/ai/analyze`, {
     method: "POST",
-    body: JSON.stringify({ force_refresh: forceRefresh }),
+    body: JSON.stringify({ force_refresh: forceRefresh, enhanced }),
   });
 }
 
@@ -210,14 +210,21 @@ export async function getLineage(table, column) {
   return request(`${V1}/lineage/${table}/${column}`);
 }
 
-export async function getAllLineage() {
-  return request(`${V1}/lineage`);
+export async function getAllLineage(connectionId = null) {
+  const url = connectionId ? `${V1}/lineage?connection_id=${connectionId}` : `${V1}/lineage`;
+  return request(url);
 }
 
 export async function createLineage(data) {
   return request(`${V1}/lineage`, {
     method: "POST",
     body: JSON.stringify(data),
+  });
+}
+
+export async function deleteLineage(id) {
+  return request(`${V1}/lineage/${id}`, {
+    method: "DELETE",
   });
 }
 

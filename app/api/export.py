@@ -126,10 +126,47 @@ def _export_markdown(data: dict, filepath: str):
 
 
 def _build_html_string(data: dict) -> str:
-    """Generate styled HTML data dictionary."""
-    md_content = _build_markdown_string(data)
+    """Generate styled HTML data dictionary suitable for PDF generation."""
+    
+    html_parts = []
+    html_parts.append(f"<h1>Data Dictionary: {data['database']}</h1>")
+    html_parts.append(f"<p><strong>Host:</strong> {data['host']}<br>")
+    html_parts.append(f"<strong>Type:</strong> {data['db_type']}<br>")
+    html_parts.append(f"<strong>Exported:</strong> {data['exported_at']}</p>")
 
-    # Simple HTML wrapper with styling
+    for schema in data["schemas"]:
+        html_parts.append(f"<h2>Schema: {schema['name']}</h2>")
+
+        for table in schema["tables"]:
+            html_parts.append(f"<h3>Table: {table['name']}</h3>")
+            if table.get("row_count"):
+                html_parts.append(f"<p><strong>Rows:</strong> {table['row_count']:,}</p>")
+
+            if table.get("ai_analysis"):
+                ai = table["ai_analysis"]
+                if ai.get("business_context"):
+                    html_parts.append(f"<blockquote>{ai['business_context']}</blockquote>")
+
+            html_parts.append("<table>")
+            html_parts.append("<thead><tr><th>Column</th><th>Type</th><th>Nullable</th><th>PK</th><th>FK</th><th>Description</th></tr></thead>")
+            html_parts.append("<tbody>")
+            for col in table["columns"]:
+                pk = "✓" if col["is_primary_key"] else ""
+                fk = "✓" if col["is_foreign_key"] else ""
+                desc = col.get("ai_description") or ""
+                html_parts.append(
+                    f"<tr><td>{col['name']}</td><td>{col['data_type']}</td><td>{col['is_nullable']}</td><td>{pk}</td><td>{fk}</td><td>{desc}</td></tr>"
+                )
+            html_parts.append("</tbody></table>")
+
+            if table["relationships"]:
+                html_parts.append("<p><strong>Relationships:</strong></p><ul>")
+                for rel in table["relationships"]:
+                    html_parts.append(f"<li><code>{rel['source_column']}</code> &rarr; <code>{rel['target_table']}.{rel['target_column']}</code></li>")
+                html_parts.append("</ul>")
+
+    content_html = "\n".join(html_parts)
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -137,21 +174,23 @@ def _build_html_string(data: dict) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Data Dictionary: {data['database']}</title>
 <style>
-  body {{ font-family: 'Inter', -apple-system, sans-serif; max-width: 1000px; margin: 0 auto; padding: 2rem; background: #0f172a; color: #e2e8f0; }}
-  h1 {{ color: #38bdf8; border-bottom: 2px solid #1e3a5f; padding-bottom: 0.5rem; }}
-  h2 {{ color: #818cf8; margin-top: 2rem; }}
-  h3 {{ color: #a78bfa; }}
-  table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; }}
-  th, td {{ border: 1px solid #334155; padding: 0.5rem 0.75rem; text-align: left; }}
-  th {{ background: #1e293b; color: #38bdf8; }}
-  tr:nth-child(even) {{ background: #1e293b; }}
-  blockquote {{ border-left: 4px solid #818cf8; margin: 1rem 0; padding: 0.5rem 1rem; background: #1e293b; border-radius: 0 8px 8px 0; }}
-  code {{ background: #1e293b; padding: 0.15rem 0.4rem; border-radius: 4px; color: #38bdf8; }}
-  a {{ color: #38bdf8; }}
+  body {{ font-family: 'Inter', -apple-system, sans-serif; max-width: 1000px; margin: 0 auto; padding: 2rem; background: #ffffff; color: #1e293b; line-height: 1.5; }}
+  h1 {{ color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }}
+  h2 {{ color: #334155; margin-top: 2rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25rem; }}
+  h3 {{ color: #475569; margin-top: 1.5rem; }}
+  table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 14px; page-break-inside: avoid; }}
+  th, td {{ border: 1px solid #cbd5e1; padding: 0.5rem 0.75rem; text-align: left; }}
+  th {{ background: #f8fafc; color: #334155; font-weight: 600; }}
+  tr:nth-child(even) {{ background: #f8fafc; }}
+  blockquote {{ border-left: 4px solid #3b82f6; margin: 1rem 0; padding: 0.5rem 1rem; background: #eff6ff; border-radius: 0 8px 8px 0; font-style: italic; }}
+  code {{ background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px; color: #0284c7; font-family: monospace; }}
+  .container {{ background: #ffffff; }}
 </style>
 </head>
 <body>
-<pre style="white-space: pre-wrap;">{md_content}</pre>
+<div class="container" id="pdf-content">
+{content_html}
+</div>
 </body>
 </html>"""
     return html

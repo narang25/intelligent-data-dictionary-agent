@@ -179,7 +179,7 @@ class Documentation(Base):
     )
 
     id = Column(Integer, primary_key=True)
-    connection_id = Column(String(36), ForeignKey("source_connections.id"), nullable=True)
+    connection_id = Column(Integer, ForeignKey("database_connections.id"), nullable=True)
     entity_type = Column(String)
     entity_id = Column(Integer)
     description = Column(Text)
@@ -197,7 +197,7 @@ class Embedding(Base):
     )
 
     id = Column(Integer, primary_key=True)
-    connection_id = Column(String(36), ForeignKey("source_connections.id"), nullable=True)
+    connection_id = Column(Integer, ForeignKey("database_connections.id"), nullable=True)
     entity_type = Column(String)
     entity_id = Column(Integer)
     vector = Column(Vector(384))

@@ -22,25 +22,6 @@ class ChatService:
         """
         q_lower = question.lower()
 
-        # RAG keywords - documentation, explanation, description questions
-        rag_keywords = [
-            "documentation", "document", "describe", "description", "explain",
-            "what is", "what are", "tell me about", "meaning of", "purpose of",
-            "why", "how does", "understand", "definition", "overview",
-            "summary", "business", "data quality", "usage", "recommended",
-            "help me understand", "can you explain", "what does"
-        ]
-
-        # Check for RAG intent first (documentation/explanation requests)
-        for keyword in rag_keywords:
-            if keyword in q_lower:
-                # But if they also ask for specific data, use SQL
-                sql_action_words = ["calculate", "compute", "sum", "count", "average", 
-                                   "how many", "how much", "total", "revenue"]
-                if any(action in q_lower for action in sql_action_words):
-                    return "sql"
-                return "rag"
-
         # SQL keywords - data retrieval, calculations, aggregations
         sql_keywords = [
             "generate sql", "write sql", "run query", "execute",
@@ -52,16 +33,31 @@ class ChatService:
             "group by", "per", "by state", "by category", "by month", "by year",
             "between", "greater than", "less than", "more than",
             "delivery time", "payment value", "order status",
-            "select", "from olist", "query"
+            "select", "from olist", "query", "which city", "which product", "which category", "which state"
         ]
 
-        # Check for SQL intent
+        # Check for SQL intent FIRST (more specific)
         for keyword in sql_keywords:
             if keyword in q_lower:
                 return "sql"
 
-        # Default to RAG for general questions
-        return "rag"
+        # RAG keywords - documentation, explanation, description questions
+        rag_keywords = [
+            "documentation", "document", "describe", "description", "explain",
+            "what is", "what are", "tell me about", "meaning of", "purpose of",
+            "why", "how does", "understand", "definition", "overview",
+            "summary", "business", "data quality", "usage", "recommended",
+            "help me understand", "can you explain", "what does", "what columns",
+            "is the", "are there", "what tables", "which tables", "where can i find"
+        ]
+
+        # Check for RAG intent SECOND
+        for keyword in rag_keywords:
+            if keyword in q_lower:
+                return "rag"
+
+        # Default to SQL for general questions since this is a data dictionary app
+        return "sql"
 
     # ==================================================
     # MAIN ENTRY
@@ -197,16 +193,25 @@ Question:
             SQLGenerationService,
             build_schema_context
         )
-        from app.connectors.registry import registry
-
         sql_service = SQLGenerationService(self.ai_service)
-        connector = registry.get_connector(self.session, connection_id) if connection_id else None
+        
+        # 1. Build context
+        context = build_schema_context(self.session, connection_id=connection_id)
 
-        # 1. Build context using connector if available
-        context = sql_service.build_schema_context(self.session, connection_id=connection_id)
+        # 2. Get correct engine and dialect
+        engine_target = self.engine
+        dialect = "postgresql"
 
-        # 2. Generate SQL
-        dialect = connector.dialect if connector else "postgresql"
+        if connection_id and user:
+            from app.services.connection_service import ConnectionService
+            conn_service = ConnectionService(self.session)
+            db_conn = conn_service.get_connection(connection_id, user.id)
+            if db_conn:
+                if db_conn.db_type != "mongodb":
+                    engine_target = conn_service.get_engine(connection_id, user.id)
+                dialect = db_conn.db_type
+
+        # 3. Generate SQL
         sql_response = sql_service.generate_sql(question, context, dialect=dialect)
 
         if "error" in sql_response:
@@ -225,13 +230,14 @@ Question:
         except Exception:
             confidence = {"score": 50, "uncertain_columns": [], "uncertain_joins": [], "warning": None}
 
-        execution = sql_service.execute_safe_query(connector or self.engine, sql_query, user=user, session=self.session)
+        execution = sql_service.execute_safe_query(engine_target, sql_query, user=user, session=self.session)
 
         if "error" in execution:
+            friendly_error = f"I generated an invalid SQL query. Please try rephrasing your question.\n\nTechnical details:\n{execution['error'].split(chr(10))[0]}"
             return {
                 "session_id": session_id,
                 "mode": "sql",
-                "answer": execution["error"],
+                "answer": friendly_error,
                 "confidence": confidence,
             }
 
@@ -302,7 +308,7 @@ Rows: {execution['rows']}
 
         for entity_type, entity_id, distance in results:
 
-            if distance > 1.2:
+            if distance > 1.5:
                 continue
 
             if (entity_type, entity_id) in seen:
@@ -316,17 +322,23 @@ Rows: {execution['rows']}
                 .first()
             )
 
-            if not doc:
-                continue
+            # Get the table name for better context
+            table_name = f"(ID: {entity_id})"
+            if entity_type == "table":
+                from app.domain.models import Table
+                tbl = self.session.query(Table).filter_by(id=entity_id).first()
+                if tbl:
+                    schema_name = tbl.schema.name if tbl.schema else "unknown"
+                    table_name = f"{schema_name}.{tbl.name}"
 
             context_text += f"""
 --- ENTITY ---
 Type: {entity_type}
-ID: {entity_id}
+Name: {table_name}
 Similarity Distance: {distance}
 
 Documentation:
-{doc.description}
+{doc.description if doc else 'No documentation available yet.'}
 """
 
             if entity_type == "table":
@@ -337,36 +349,46 @@ Documentation:
                     .all()
                 )
 
-                context_text += "\n--- PROFILING ---\n"
+                if columns:
+                    context_text += "\n--- COLUMNS ---\n"
+                    for column in columns:
+                        nullable = "nullable" if column.is_nullable else "not null"
+                        pk = " (PK)" if column.is_primary_key else ""
+                        fk = " (FK)" if column.is_foreign_key else ""
+                        context_text += f"- {column.name} ({column.data_type}) [{nullable}]{pk}{fk}\n"
 
-                for column in columns:
-                    profile = column.profile
-
-                    if profile:
-                        context_text += (
-                            f"\nColumn: {column.name}\n"
-                            f"- Null %: {profile.null_percentage}\n"
-                            f"- Distinct Count: {profile.distinct_count}\n"
-                            f"- Min: {profile.min_value}\n"
-                            f"- Max: {profile.max_value}\n"
-                            f"- Mean: {profile.mean}\n"
-                        )
-
-                        if profile.null_percentage == 100:
+                    context_text += "\n--- PROFILING ---\n"
+                    has_profiling = False
+                    for column in columns:
+                        profile = column.profile
+                        if profile:
+                            has_profiling = True
                             context_text += (
-                                f"⚠ Column {column.name} is 100% NULL.\n"
+                                f"\nColumn: {column.name}\n"
+                                f"- Null %: {profile.null_percentage}\n"
+                                f"- Distinct Count: {profile.distinct_count}\n"
+                                f"- Min: {profile.min_value}\n"
+                                f"- Max: {profile.max_value}\n"
+                                f"- Mean: {profile.mean}\n"
                             )
+
+                            if profile.null_percentage == 100:
+                                context_text += (
+                                    f"⚠ Column {column.name} is 100% NULL.\n"
+                                )
 
         history = self._get_recent_history(session_id)
 
         system_prompt = """
 You are an enterprise data architect AI assistant.
 
-Use documentation, profiling metrics, and conversation history
+Use documentation, table column schemas, profiling metrics, and conversation history
 to answer questions.
 
-If profiling shows anomalies (e.g., 100% null columns),
-explicitly highlight them as data quality issues.
+CRITICAL RULES:
+1. If profiling metrics are NOT provided in the context below, DO NOT assume or invent hypothetical numbers (e.g. "Assuming 5% are null"). State clearly that profiling metrics are not available for the table.
+2. If documentation is missing, rely ONLY on the provided column names and data types.
+3. If profiling shows anomalies (e.g., 100% null columns), explicitly highlight them as data quality issues.
 
 Be precise, analytical, and professional.
 """

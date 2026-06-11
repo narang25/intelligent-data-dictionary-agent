@@ -25,7 +25,7 @@ class VectorSearchService:
             params = {
                 "query_vector": vector_str,
                 "top_k": top_k,
-                "connection_id": connection_id
+                "connection_id": str(connection_id)
             }
         else:
             sql = """
